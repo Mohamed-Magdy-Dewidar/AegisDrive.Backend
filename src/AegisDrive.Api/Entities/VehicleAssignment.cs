@@ -11,9 +11,7 @@ public class VehicleAssignment : BaseEntity<long>
 
 
 
-    [NotMapped]
-    public bool IsActive => UnassignedAt == null;
-
+    
     public Driver Driver { get; set; } = null!;
     public Vehicle Vehicle { get; set; } = null!;
 }

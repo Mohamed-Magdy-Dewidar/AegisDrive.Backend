@@ -13,9 +13,7 @@ public class Vehicle : BaseEntity<int>
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public VehicleStatus Status { get; set; } = VehicleStatus.Active;
-    
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
+        
     public Company? Company { get; set; }
     public Driver? CurrentDriver { get; set; } // Optional navigation
     public ICollection<Device> Devices { get; set; } = new List<Device>();
