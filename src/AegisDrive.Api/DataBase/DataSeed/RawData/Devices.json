@@ -1,0 +1,76 @@
+[
+  {
+    "Id": "PI-001",
+    "VehicleId": 1,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.1.0"
+  },
+  {
+    "Id": "ESP-001",
+    "VehicleId": 1,
+    "Type": "Esp32",
+    "Status": "Online",
+    "FirmwareVersion": "1.0.0"
+  },
+
+  {
+    "Id": "PI-003",
+    "VehicleId": 3,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.1.0"
+  },
+  {
+    "Id": "ESP-003",
+    "VehicleId": 3,
+    "Type": "Esp32",
+    "Status": "Online",
+    "FirmwareVersion": "1.0.0"
+  },
+
+  {
+    "Id": "PI-005",
+    "VehicleId": 5,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.0.0"
+  },
+  {
+    "Id": "PI-006",
+    "VehicleId": 6,
+    "Type": "RaspberryPi",
+    "Status": "Offline",
+    "FirmwareVersion": "1.9.5"
+  },
+
+  {
+    "Id": "PI-009",
+    "VehicleId": 9,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.1.0"
+  },
+
+  {
+    "Id": "PI-011",
+    "VehicleId": 11,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.2.0"
+  },
+  {
+    "Id": "PI-012",
+    "VehicleId": 12,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.2.0"
+  },
+  {
+    "Id": "PI-014",
+    "VehicleId": 14,
+    "Type": "RaspberryPi",
+    "Status": "Online",
+    "FirmwareVersion": "2.2.0"
+  }
+]

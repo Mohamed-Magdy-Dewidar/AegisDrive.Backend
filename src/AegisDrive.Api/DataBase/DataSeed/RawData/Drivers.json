@@ -1,0 +1,101 @@
+[
+  {
+    "CompanyId": 1,
+    "FullName": "Mahmoud Hassan",
+    "PhoneNumber": "+201200000001",
+    "Email": "m.hassan@nile.com",
+    "SafetyScore": 92,
+    "IsActive": true
+  },
+  {
+    "CompanyId": 1,
+    "FullName": "Youssef El-Sayed",
+    "PhoneNumber": "+201200000002",
+    "Email": "y.sayed@nile.com",
+    "SafetyScore": 78,
+    "IsActive": true
+  },
+  {
+    "CompanyId": 1,
+    "FullName": "Amr Diab (Driver)",
+    "PhoneNumber": "+201200000003",
+    "Email": "amr.d@nile.com",
+    "SafetyScore": 98,
+    "IsActive": true
+  },
+
+  {
+    "CompanyId": 2,
+    "FullName": "Karim Benzema",
+    "PhoneNumber": "+201200000004",
+    "Email": "k.benz@cairocabs.com",
+    "SafetyScore": 85,
+    "IsActive": true
+  },
+  {
+    "CompanyId": 2,
+    "FullName": "Mohamed Salah",
+    "PhoneNumber": "+201200000005",
+    "Email": "mo.salah@cairocabs.com",
+    "SafetyScore": 99,
+    "IsActive": true
+  },
+  {
+    "CompanyId": 2,
+    "FullName": "Hassan Shehata",
+    "PhoneNumber": "+201200000006",
+    "Email": "h.shehata@cairocabs.com",
+    "SafetyScore": 65,
+    "IsActive": true
+  },
+
+  {
+    "CompanyId": 3,
+    "FullName": "Omar Sharif",
+    "PhoneNumber": "+201200000007",
+    "Email": "omar.s@delta.eg",
+    "SafetyScore": 91,
+    "IsActive": true
+  },
+  {
+    "CompanyId": 3,
+    "FullName": "Tamer Hosny",
+    "PhoneNumber": "+201200000008",
+    "Email": "tamer.h@delta.eg",
+    "SafetyScore": 88,
+    "IsActive": true
+  },
+
+  {
+    "CompanyId": null,
+    "FullName": "Independent User A",
+    "PhoneNumber": "+201200000009",
+    "Email": "indep.a@gmail.com",
+    "SafetyScore": 100,
+    "IsActive": true
+  },
+  {
+    "CompanyId": null,
+    "FullName": "Independent User B",
+    "PhoneNumber": "+201200000010",
+    "Email": "indep.b@yahoo.com",
+    "SafetyScore": 45,
+    "IsActive": true
+  },
+  {
+    "CompanyId": null,
+    "FullName": "Family Driver X",
+    "PhoneNumber": "+201200000011",
+    "Email": "family.x@hotmail.com",
+    "SafetyScore": 96,
+    "IsActive": true
+  },
+  {
+    "CompanyId": null,
+    "FullName": "Student Driver Y",
+    "PhoneNumber": "+201200000012",
+    "Email": "student.y@edu.eg",
+    "SafetyScore": 72,
+    "IsActive": true
+  }
+]

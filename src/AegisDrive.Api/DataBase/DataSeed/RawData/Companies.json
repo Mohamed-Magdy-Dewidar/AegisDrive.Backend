@@ -1,0 +1,20 @@
+[
+  {
+    "Name": "FedEx",
+    "RepresentativeName": "Ahmed Fathy",
+    "RepresentativeEmail": "ahmed.fathy@nilelogistics.com",
+    "RepresentativePhone": "+201001001001"
+  },
+  {
+    "Name": "DHL",
+    "RepresentativeName": "Mona Zaki",
+    "RepresentativeEmail": "m.zaki@cairocabs.com",
+    "RepresentativePhone": "+201002002002"
+  },
+  {
+    "Name": "Aramex",
+    "RepresentativeName": "Khaled Amer",
+    "RepresentativeEmail": "khaled.amer@aramax.com",
+    "RepresentativePhone": "+201003003003"
+  }
+]

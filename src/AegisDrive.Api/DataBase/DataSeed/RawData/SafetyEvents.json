@@ -1,0 +1,34 @@
+[
+  {
+    "Id": "550e8400-e29b-41d4-a716-446655440111",
+    "DeviceId": "PI-001",
+    "VehicleId": 1,
+    "DriverId": 1,
+    "EventType": "Distracted",
+    "AlertLevel": "Medium",
+    "Message": "Driver looking at phone.",
+    "EarValue": 0.28,
+    "MarValue": 0.15,
+    "HeadYaw": -25.5,
+    "RoadHasHazard": false,
+    "Timestamp": "2025-11-26T10:30:00Z"
+  },
+  {
+    "Id": "660e8400-e29b-41d4-a716-446655440222",
+    "DeviceId": "PI-012",
+    "VehicleId": 12,
+    "DriverId": 10,
+    "EventType": "Drowsy",
+    "AlertLevel": "Critical",
+    "Message": "CRITICAL: Hazard ahead, driver impaired!",
+    "EarValue": 0.15,
+    "MarValue": 0.60,
+    "HeadYaw": -10.0,
+    "S3DriverImagePath": "https://s3.aws.com/demo/drowsy_face.jpg",
+    "S3RoadImagePath": "https://s3.aws.com/demo/road_hazard.jpg",
+    "RoadHasHazard": true,
+    "RoadVehicleCount": 2,
+    "RoadClosestDistance": 8.5,
+    "Timestamp": "2025-11-26T12:45:00Z"
+  }
+]

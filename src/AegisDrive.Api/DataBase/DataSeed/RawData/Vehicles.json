@@ -1,0 +1,110 @@
+[
+  {
+    "CompanyId": 1,
+    "CurrentDriverId": 1,
+    "PlateNumber": "ABC-123",
+    "Model": "Mercedes Actros",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 1,
+    "CurrentDriverId": null,
+    "PlateNumber": "DEF-456",
+    "Model": "Volvo FH",
+    "Status": "Maintenance"
+  },
+  {
+    "CompanyId": 1,
+    "CurrentDriverId": 3,
+    "PlateNumber": "GHI-789",
+    "Model": "Scania R-Series",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 1,
+    "CurrentDriverId": null,
+    "PlateNumber": "JKL-012",
+    "Model": "MAN TGX",
+    "Status": "Active"
+  },
+
+  {
+    "CompanyId": 2,
+    "CurrentDriverId": 4,
+    "PlateNumber": "CAB-001",
+    "Model": "Hyundai Elantra",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 2,
+    "CurrentDriverId": 5,
+    "PlateNumber": "CAB-002",
+    "Model": "Toyota Corolla",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 2,
+    "CurrentDriverId": 6,
+    "PlateNumber": "CAB-003",
+    "Model": "BYD F3",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 2,
+    "CurrentDriverId": null,
+    "PlateNumber": "CAB-004",
+    "Model": "Nissan Sunny",
+    "Status": "InActive"
+  },
+
+  {
+    "CompanyId": 3,
+    "CurrentDriverId": 7,
+    "PlateNumber": "DLV-999",
+    "Model": "Chevrolet N300",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": 3,
+    "CurrentDriverId": 8,
+    "PlateNumber": "DLV-888",
+    "Model": "Suzuki Carry",
+    "Status": "Active"
+  },
+
+  {
+    "CompanyId": null,
+    "CurrentDriverId": 9,
+    "PlateNumber": "PVT-111",
+    "Model": "Honda Civic",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": null,
+    "CurrentDriverId": 10,
+    "PlateNumber": "PVT-222",
+    "Model": "BMW 320i",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": null,
+    "CurrentDriverId": null,
+    "PlateNumber": "PVT-333",
+    "Model": "Kia Cerato",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": null,
+    "CurrentDriverId": 12,
+    "PlateNumber": "PVT-444",
+    "Model": "Fiat Tipo",
+    "Status": "Active"
+  },
+  {
+    "CompanyId": null,
+    "CurrentDriverId": null,
+    "PlateNumber": "PVT-555",
+    "Model": "Jeep Renegade",
+    "Status": "InActive"
+  }
+]

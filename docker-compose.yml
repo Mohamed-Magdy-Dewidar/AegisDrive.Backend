@@ -1,0 +1,6 @@
+services:
+  aegisdrive.api:
+    image: ${DOCKER_REGISTRY-}aegisdriveapi
+    build:
+      context: .
+      dockerfile: src/AegisDrive.Api/Dockerfile

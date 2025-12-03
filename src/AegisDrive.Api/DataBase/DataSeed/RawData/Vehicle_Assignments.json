@@ -1,0 +1,77 @@
+[
+  {
+    "DriverId": 1,
+    "VehicleId": 1,
+    "AssignedAt": "2025-11-26T08:00:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 3,
+    "VehicleId": 3,
+    "AssignedAt": "2025-11-26T08:30:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 4,
+    "VehicleId": 5,
+    "AssignedAt": "2025-11-26T09:00:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 5,
+    "VehicleId": 6,
+    "AssignedAt": "2025-11-26T09:15:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 6,
+    "VehicleId": 7,
+    "AssignedAt": "2025-11-26T10:00:00Z",
+    "UnassignedAt": null
+  },
+
+  {
+    "DriverId": 7,
+    "VehicleId": 9,
+    "AssignedAt": "2025-11-26T07:00:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 8,
+    "VehicleId": 10,
+    "AssignedAt": "2025-11-26T07:30:00Z",
+    "UnassignedAt": null
+  },
+
+  {
+    "DriverId": 9,
+    "VehicleId": 11,
+    "AssignedAt": "2025-11-01T00:00:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 10,
+    "VehicleId": 12,
+    "AssignedAt": "2025-11-20T12:00:00Z",
+    "UnassignedAt": null
+  },
+  {
+    "DriverId": 12,
+    "VehicleId": 14,
+    "AssignedAt": "2025-11-26T08:00:00Z",
+    "UnassignedAt": null
+  },
+
+  {
+    "DriverId": 2,
+    "VehicleId": 1,
+    "AssignedAt": "2025-11-25T08:00:00Z",
+    "UnassignedAt": "2025-11-25T16:00:00Z"
+  },
+  {
+    "DriverId": 2,
+    "VehicleId": 2,
+    "AssignedAt": "2025-11-24T08:00:00Z",
+    "UnassignedAt": "2025-11-24T16:00:00Z"
+  }
+]
