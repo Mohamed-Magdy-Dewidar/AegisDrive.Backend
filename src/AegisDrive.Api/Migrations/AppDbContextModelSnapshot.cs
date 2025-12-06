@@ -202,7 +202,7 @@ namespace AegisDrive.Api.Migrations
 
                     b.HasIndex("DriverId");
 
-                    b.ToTable("FamilyMembers");
+                    b.ToTable("FamilyMembers", (string)null);
                 });
 
             modelBuilder.Entity("AegisDrive.Api.Entities.SafetyEvent", b =>

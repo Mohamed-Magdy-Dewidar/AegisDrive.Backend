@@ -1,5 +1,4 @@
 ﻿using AegisDrive.Api.Entities.Enums;
-using AegisDrive.Api.Entities.Enums.Device;
 using AegisDrive.Api.Entities.Enums.Driver;
 using System.Text.Json.Serialization;
 
@@ -11,7 +10,6 @@ public class SafetyEvent : BaseEntity<Guid>
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public AlertLevel AlertLevel { get; set; } = AlertLevel.NONE;
-
 
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

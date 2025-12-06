@@ -1,10 +1,16 @@
 using AegisDrive.Api.Contracts;
+using AegisDrive.Api.Contracts.Events;
 using AegisDrive.Api.DataBase;
 using AegisDrive.Api.Extensions;
+using AegisDrive.Api.Features.Ingestion.Consumers;
 using AegisDrive.Api.Shared;
+using AegisDrive.Api.Shared.Email;
 using AegisDrive.Api.Shared.Services;
+using AegisDrive.Infrastructure.Services.Notification.Templates;
 using Amazon;
 using Amazon.S3;
+using Amazon.SimpleEmail;
+using Amazon.SQS;
 using Carter;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using StackExchange.Redis;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,9 +58,59 @@ builder.Services.AddSwaggerGen(options =>
 
 
 
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions()); 
+
 // --- APPLICATION CONFIGURATION ---
+
+
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.ConfigurationSection));
+
+
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
+builder.Services.Configure<SqsSettings>(builder.Configuration.GetSection(SqsSettings.SectionName));
+
+
+builder.Services.AddAWSService<IAmazonSQS>(); // By Default Singleton
+//builder.Services.AddSingleton<IAmazonSQS>();
+builder.Services.AddHostedService<CriticalEventSqsConsumer>();
+
+
+
+
+//builder.Services.AddAWSMessageBus(bus =>
+//{
+//    var sqsSettings = builder.Configuration.GetSection(SqsSettings.SectionName).Get<SqsSettings>();
+
+//    // ---------------------------------------------------------
+//    // 1. CRITICAL Queue & Handler
+//    // ---------------------------------------------------------
+//    if (!string.IsNullOrEmpty(sqsSettings?.DrowsinessCriticalEventsQueue))
+//    {
+//        bus.AddSQSPoller(sqsSettings.DrowsinessCriticalEventsQueue, options =>
+//        {
+//        })
+//     .AddMessageHandler<CriticalEventMessageHandler, CriticalEventMessage>();
+//    }
+
+//    // ---------------------------------------------------------
+//    // 2. REGULAR Queue & Handler
+//    // ---------------------------------------------------------
+//    if (!string.IsNullOrEmpty(sqsSettings?.DrowsinessEventsQueue))
+//    {
+//        bus.AddSQSPoller(sqsSettings.DrowsinessEventsQueue)
+//           .AddMessageHandler<SafetyEventHandler, SafetyEventMessage>();
+//    }
+
+//    // Global Settings
+//    bus.ConfigureBackoffPolicy(cfg => cfg.UseCappedExponentialBackoff());
+//});
+
+
+//add aws service 
+builder.Services.AddAWSService<IAmazonSimpleEmailService>();
+
+builder.Services.AddKeyedScoped<INotificationService, SesNotificationService>("Email");
 
 // --- DATABASE & IDENTITY ---
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -105,6 +162,17 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 });
 
 
+
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
+if (string.IsNullOrEmpty(redisConnectionString))    
+    throw new ArgumentNullException("RedisConnection string is missing in configuration");
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
+
+
+
+
 // --- LIBRARIES ---
 var assembly = typeof(Program).Assembly;
 
@@ -122,6 +190,8 @@ var app = builder.Build();
 
 await app.IntializeDataBase();
 
+//var emailService = app.Services.GetRequiredService<IAmazonSimpleEmailService>();
+//await EmailTemplates.InitializeTemplates(emailService);
 
 if (app.Environment.IsDevelopment())
 {

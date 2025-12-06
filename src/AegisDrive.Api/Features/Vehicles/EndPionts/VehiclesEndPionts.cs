@@ -1,5 +1,6 @@
 ﻿using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Features.Fleet;
+using AegisDrive.Api.Features.Monitoring;
 using Carter;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -87,6 +88,19 @@ public class VehiclesEndPionts : ICarterModule
             return Results.Ok(result.Value);
         })
         .WithSummary("End a driver shift (Unassign driver from vehicle)");
+
+
+
+
+        // needs Fix
+
+        group.MapGet("/monitor/live/{vehicleId}", async (int vehicleId, ISender sender) =>
+        {
+            var result = await sender.Send(new GetVehicleLiveState.Query(vehicleId));
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.NotFound(result.Error);
+        })
+        .WithTags("Real-Time Monitor")
+        .WithSummary("Get live vehicle telemetry (Redis backed)");
 
 
     }

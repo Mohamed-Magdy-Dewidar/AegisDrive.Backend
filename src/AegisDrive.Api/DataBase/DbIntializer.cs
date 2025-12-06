@@ -42,7 +42,7 @@ public class DbIntializer : IDbIntializer
     public async Task SeedDataAsync()
     {
 
-    
+        
 
 
         // 1. COMPANIES
@@ -125,6 +125,29 @@ public class DbIntializer : IDbIntializer
             if (events != null && events.Any())
             {
                 _context.SafetyEvents.AddRange(events);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        // 7. Telemetry EVENTS (Depends on Vehicles, Devices)
+        if (!await _context.TelemetryEvents.AnyAsync())
+        {
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            options.Converters.Add(new JsonStringEnumConverter());
+            // <--- Critical for "IgnitionOn" -> Enum.IgnitionOn
+            // to Map strings to Enum
+
+            _logger.LogInformation("Seeding TelemetryEvents Events...");
+            var eventsData = await File.ReadAllTextAsync(@"DataBase/DataSeed/RawData/TelemetryData.json");
+            var events = JsonSerializer.Deserialize<List<TelemetryEvent>>(eventsData ,options);
+
+            if (events != null && events.Any())
+            {
+                _context.TelemetryEvents.AddRange(events);
                 await _context.SaveChangesAsync();
             }
         }

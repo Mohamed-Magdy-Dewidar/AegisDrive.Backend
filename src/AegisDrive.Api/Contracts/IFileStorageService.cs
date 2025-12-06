@@ -37,5 +37,8 @@
         public IDictionary<string, string> GetPresignedUrls(IEnumerable<string> keys);
 
 
+        Task<string> MoveFileAsync(string sourceKey, string destinationKey, CancellationToken cancellationToken = default);
+
+
     }
 }

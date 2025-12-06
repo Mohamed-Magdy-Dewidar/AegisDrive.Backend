@@ -1,0 +1,119 @@
+[
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0444,
+    "Longitude": 31.2357,
+    "SpeedKmh": 0.0,
+    "EventType": "IgnitionOn",
+    "Timestamp": "2025-12-06T08:00:00Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0445,
+    "Longitude": 31.2358,
+    "SpeedKmh": 15.5,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:05Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0450,
+    "Longitude": 31.2360,
+    "SpeedKmh": 35.2,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:10Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0462,
+    "Longitude": 31.2365,
+    "SpeedKmh": 58.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:15Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0475,
+    "Longitude": 31.2370,
+    "SpeedKmh": 62.5,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:20Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0488,
+    "Longitude": 31.2375,
+    "SpeedKmh": 65.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:25Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0495,
+    "Longitude": 31.2378,
+    "SpeedKmh": 88.0,
+    "EventType": "HarshAcceleration",
+    "Timestamp": "2025-12-06T08:00:30Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0510,
+    "Longitude": 31.2385,
+    "SpeedKmh": 75.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:35Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0525,
+    "Longitude": 31.2390,
+    "SpeedKmh": 20.0,
+    "EventType": "HarshBrake",
+    "Timestamp": "2025-12-06T08:00:40Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0530,
+    "Longitude": 31.2392,
+    "SpeedKmh": 0.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T08:00:45Z"
+  },
+  {
+    "DeviceId": "PI-001",
+    "VehicleId": 17,
+    "Latitude": 30.0530,
+    "Longitude": 31.2392,
+    "SpeedKmh": 0.0,
+    "EventType": "IgnitionOff",
+    "Timestamp": "2025-12-06T08:00:50Z"
+  },
+  {
+    "DeviceId": "ESP-003",
+    "VehicleId": 14,
+    "Latitude": 31.2001,
+    "Longitude": 29.9187,
+    "SpeedKmh": 45.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T09:15:00Z"
+  },
+  {
+    "DeviceId": "ESP-001",
+    "VehicleId": 1,
+    "Latitude": 31.2005,
+    "Longitude": 29.9190,
+    "SpeedKmh": 48.0,
+    "EventType": "GpsUpdate",
+    "Timestamp": "2025-12-06T09:15:05Z"
+  }
+]

@@ -89,5 +89,23 @@ namespace AegisDrive.Api.Shared.Services
             }
             return results;
         }
+
+        public async Task<string> MoveFileAsync(string sourceKey, string destinationKey, CancellationToken cancellationToken = default)
+        {
+            // 1. Copy
+            var copyRequest = new CopyObjectRequest
+            {
+                SourceBucket = _s3Settings.BucketName,
+                SourceKey = sourceKey,
+                DestinationBucket = _s3Settings.BucketName,
+                DestinationKey = destinationKey
+            };
+            await _s3Client.CopyObjectAsync(copyRequest, cancellationToken);
+
+            // 2. Delete Original
+            await DeleteAsync(sourceKey, cancellationToken);
+
+            return destinationKey;
+        }
     }
 }
