@@ -55,7 +55,6 @@ public class CriticalEventSqsConsumer : BackgroundService
                     MaxNumberOfMessages = 1, // Process one critical event at a time
                     WaitTimeSeconds = 20,     // Long polling
                     MessageAttributeNames = new List<string> { "All" },
-                    //AttributeNames = new List<string> { "All" }
                 };
 
                 var response = await _sqsClient.ReceiveMessageAsync(request, stoppingToken);

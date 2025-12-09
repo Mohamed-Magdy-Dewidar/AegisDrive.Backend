@@ -78,34 +78,6 @@ builder.Services.AddHostedService<CriticalEventSqsConsumer>();
 
 
 
-//builder.Services.AddAWSMessageBus(bus =>
-//{
-//    var sqsSettings = builder.Configuration.GetSection(SqsSettings.SectionName).Get<SqsSettings>();
-
-//    // ---------------------------------------------------------
-//    // 1. CRITICAL Queue & Handler
-//    // ---------------------------------------------------------
-//    if (!string.IsNullOrEmpty(sqsSettings?.DrowsinessCriticalEventsQueue))
-//    {
-//        bus.AddSQSPoller(sqsSettings.DrowsinessCriticalEventsQueue, options =>
-//        {
-//        })
-//     .AddMessageHandler<CriticalEventMessageHandler, CriticalEventMessage>();
-//    }
-
-//    // ---------------------------------------------------------
-//    // 2. REGULAR Queue & Handler
-//    // ---------------------------------------------------------
-//    if (!string.IsNullOrEmpty(sqsSettings?.DrowsinessEventsQueue))
-//    {
-//        bus.AddSQSPoller(sqsSettings.DrowsinessEventsQueue)
-//           .AddMessageHandler<SafetyEventHandler, SafetyEventMessage>();
-//    }
-
-//    // Global Settings
-//    bus.ConfigureBackoffPolicy(cfg => cfg.UseCappedExponentialBackoff());
-//});
-
 
 //add aws service 
 builder.Services.AddAWSService<IAmazonSimpleEmailService>();
@@ -189,6 +161,7 @@ builder.Services.AddValidatorsFromAssembly(assembly);
 var app = builder.Build();
 
 await app.IntializeDataBase();
+
 
 //var emailService = app.Services.GetRequiredService<IAmazonSimpleEmailService>();
 //await EmailTemplates.InitializeTemplates(emailService);
