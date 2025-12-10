@@ -7,6 +7,7 @@ public static class EmailTemplates
 {
     public const string CriticalAlertTemplateName = "AegisDrive_CriticalAlert_v3"; // Updated Version
     public const string GeneralNotificationTemplateName = "AegisDrive_General_v1";
+    public const string HighAlertTemplateName = "AegisDrive_HighAlert_v1";
 
     public static async Task InitializeTemplates(IAmazonSimpleEmailService emailService)
     {
@@ -105,6 +106,69 @@ public static class EmailTemplates
             }
         };
 
+
+        // 3. HIGH ALERT TEMPLATE (No Images, Action Button)
+        var highTemplate = new CreateTemplateRequest
+        {
+            Template = new Template
+            {
+                TemplateName = "AegisDrive_HighAlert_v1",
+                SubjectPart = "⚠️ WARNING: {{EventType}} - {{DriverName}}",
+                HtmlPart = """
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+                
+                <div style="background-color: #f57c00; color: white; padding: 20px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 22px; text-transform: uppercase;">SAFETY WARNING</h1>
+                    <p style="margin: 5px 0 0; font-size: 16px; opacity: 0.9;">Driver Behavior Alert</p>
+                </div>
+                
+                <div style="padding: 30px;">
+                    
+                    <p style="font-size: 16px; color: #333;"><strong>Attention Fleet Manager,</strong></p>
+                    <p style="color: #555; line-height: 1.5;">
+                        A safety warning has been triggered for one of your vehicles. The driver was detected engaging in risky behavior while a road hazard was present.
+                    </p>
+
+                    <div style="background-color: #fff3e0; border-left: 5px solid #f57c00; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 5px 0;"><strong>Driver:</strong> {{DriverName}}</p>
+                        <p style="margin: 5px 0;"><strong>Vehicle:</strong> {{VehiclePlate}}</p>
+                        <p style="margin: 5px 0;"><strong>Issue:</strong> {{Message}}</p>
+                        <p style="margin: 5px 0;"><strong>Time:</strong> {{Timestamp}}</p>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
+                        <a href="https://dashboard.aegisdrive.com/incidents/{{EventId}}" 
+                           style="background-color: #f57c00; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
+                            View Incident Details & Evidence
+                        </a>
+                        <p style="margin-top: 15px; font-size: 13px; color: #777;">
+                            Click to view driver snapshots, road context, and location history.
+                        </p>
+                    </div>
+
+                </div>
+                
+                <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+                    <p style="margin: 0;">AegisDrive Fleet Safety</p>
+                    <p style="margin: 5px 0 0;">Device: {{DeviceId}}</p>
+                </div>
+            </div>
+            """,
+                TextPart = """
+            SAFETY WARNING
+            ==============
+            Driver: {{DriverName}}
+            Vehicle: {{VehiclePlate}}
+            Issue: {{Message}}
+            Time: {{Timestamp}}
+
+            View full details and evidence here:
+            https://dashboard.aegisdrive.com/incidents/{{EventId}}
+            """
+            }
+        };
+
+
         // 2. GENERAL NOTIFICATION TEMPLATE
         var generalTemplate = new CreateTemplateRequest
         {
@@ -124,7 +188,10 @@ public static class EmailTemplates
             }
         };
 
+
+
         await SafeUpdateTemplate(emailService, criticalTemplate);
+        await SafeUpdateTemplate(emailService, highTemplate);
         await SafeUpdateTemplate(emailService, generalTemplate);
     }
 

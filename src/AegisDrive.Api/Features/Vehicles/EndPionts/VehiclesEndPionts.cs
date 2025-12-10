@@ -92,17 +92,6 @@ public class VehiclesEndPionts : ICarterModule
 
 
 
-        // needs Fix
-
-        group.MapGet("/monitor/live/{vehicleId}", async (int vehicleId, ISender sender) =>
-        {
-            var result = await sender.Send(new GetVehicleLiveState.Query(vehicleId));
-            return result.IsSuccess ? Results.Ok(result.Value) : Results.NotFound(result.Error);
-        })
-        .WithTags("Real-Time Monitor")
-        .WithSummary("Get live vehicle telemetry (Redis backed)");
-
-
     }
 
 

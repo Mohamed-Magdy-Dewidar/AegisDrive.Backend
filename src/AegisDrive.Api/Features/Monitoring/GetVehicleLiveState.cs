@@ -32,20 +32,38 @@ public static class GetVehicleLiveState
         {
             string redisKey = $"vehicle:{request.VehicleId}:live";
 
+
             //  Check Redis Cache
-            var cachedData = await _redis.StringGetAsync(redisKey);
-            if (!cachedData.IsNull)
+            // A. CHECK REDIS (Hash Strategy)
+            HashEntry[] hashEntries = await _redis.HashGetAllAsync(redisKey);            
+            
+            if (hashEntries.Any())
             {
-                var liveState = JsonSerializer.Deserialize<VehicleLiveStateResponse>(cachedData.ToString());
-                if (liveState != null)
+                // Convert Hash -> DTO
+                var dict = hashEntries.ToDictionary(h => h.Name.ToString(), h => h.Value.ToString());
+                // If we have at least the VehicleId, we consider it a Cache Hit
+                if (dict.TryGetValue("PlateNumber", out var plateNumber))
                 {
-                    return Result.Success(liveState);
+                    string Status = dict.GetValueOrDefault("Status", "Active");
+                    var liveLocation = new LiveLocationResponse(
+                        double.Parse(dict.GetValueOrDefault("Latitude", "0")),
+                        double.Parse(dict.GetValueOrDefault("Longitude", "0")),
+                        double.Parse(dict.GetValueOrDefault("SpeedKmh", "0")),
+                        DateTime.Parse(dict.GetValueOrDefault("LastUpdateUtc", DateTime.UtcNow.ToString("o")))
+                    );
+
+                    return Result.Success(new VehicleLiveStateResponse(
+                        request.VehicleId,
+                        plateNumber,
+                        Status,
+                        liveLocation
+                    ));
                 }
             }
 
+
             // We need to fetch the Vehicle AND its MOST RECENT telemetry point.            
             var vehicleDto = await _vehicleRepository.GetAll()
-                .AsNoTracking()
                 .Where(v => v.Id == request.VehicleId)
                 .Select(v => new
                 {
@@ -65,7 +83,7 @@ public static class GetVehicleLiveState
 
             var response = new VehicleLiveStateResponse(
                 vehicleDto.Id,
-                vehicleDto.PlateNumber ?? "N/A",
+                vehicleDto.PlateNumber ?? "N/A" ,
                 vehicleDto.Status.ToString(),
                 vehicleDto.LatestTelemetry != null
                     ? new LiveLocationResponse(
@@ -73,11 +91,23 @@ public static class GetVehicleLiveState
                         vehicleDto.LatestTelemetry.Longitude,
                         vehicleDto.LatestTelemetry.SpeedKmh,
                         vehicleDto.LatestTelemetry.Timestamp)
-                    : new LiveLocationResponse(0, 0, 0, DateTime.UtcNow) // Default / Placeholder
+                    : new LiveLocationResponse(0, 0, 0, DateTime.UtcNow) 
             );
+            
+            // C. UPDATE REDIS (Using HashSetAsync to match IngestTelemetry)
+            var newHashEntries = new HashEntry[]
+            {
+                new HashEntry("PlateNumber", response.PlateNumber),
+                new HashEntry("Status",   response.Status),
+                new HashEntry("Latitude", response.LiveLocation?.Latitude ?? 0),
+                new HashEntry("Longitude", response.LiveLocation?.Longitude ?? 0),
+                new HashEntry("SpeedKmh", response.LiveLocation?.SpeedKmh ?? 0),
+                new HashEntry("LastUpdateUtc", response.LiveLocation?.LastUpdateUtc.ToString("o") ?? DateTime.UtcNow.ToString("o"))
+            };
 
-            var serializedData = JsonSerializer.Serialize(response);
-            await _redis.StringSetAsync(redisKey, serializedData, TimeSpan.FromSeconds(60));
+            await _redis.HashSetAsync(redisKey, newHashEntries);
+            await _redis.KeyExpireAsync(redisKey, TimeSpan.FromMinutes(2));
+
 
             return Result.Success(response);
         }

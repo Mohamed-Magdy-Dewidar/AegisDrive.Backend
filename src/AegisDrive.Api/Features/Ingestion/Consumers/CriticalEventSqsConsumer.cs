@@ -52,7 +52,7 @@ public class CriticalEventSqsConsumer : BackgroundService
                 var request = new ReceiveMessageRequest
                 {
                     QueueUrl = _queueUrl,
-                    MaxNumberOfMessages = 1, // Process one critical event at a time
+                    MaxNumberOfMessages = 5, // Process one critical event at a time
                     WaitTimeSeconds = 20,     // Long polling
                     MessageAttributeNames = new List<string> { "All" },
                 };
@@ -100,7 +100,7 @@ public class CriticalEventSqsConsumer : BackgroundService
             _logger.LogInformation("📩 Received Critical Event: MessageId={MessageId}", sqsMessage.MessageId);
 
             // Deserialize message body directly (no envelope wrapper)
-            var message = JsonSerializer.Deserialize<CriticalEventMessage>(
+            var message = JsonSerializer.Deserialize<CriticalDrowsinessEventMessage>(
                 sqsMessage.Body,
                 new JsonSerializerOptions
                 {
@@ -294,4 +294,8 @@ public class CriticalEventSqsConsumer : BackgroundService
             return false; 
         }
     }
+
+
+
+
 }

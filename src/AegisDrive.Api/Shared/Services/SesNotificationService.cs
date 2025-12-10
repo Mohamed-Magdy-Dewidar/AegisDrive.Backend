@@ -36,6 +36,23 @@ public class SesNotificationService : INotificationService
         await SendTemplatedEmail(to, EmailTemplates.GeneralNotificationTemplateName, templateData);
     }
 
+    public async Task SendHighAlertAsync(string to,string driverName,string vehiclePlate,string message,string eventType,Guid eventId ,string deviceId)
+    {
+        var templateData = new
+        {
+            DriverName = driverName,
+            VehiclePlate = vehiclePlate,
+            Message = message,
+            EventType = eventType,
+            EventId = eventId.ToString(),
+            Timestamp = DateTime.UtcNow.ToString("g"),
+            DeviceId = deviceId
+        };
+
+        // Use the new High Alert Template
+        await SendTemplatedEmail(to, EmailTemplates.HighAlertTemplateName, templateData);
+    }
+
     // Specialized method for Critical Alerts (Called by your CriticalEventMessageHandler)
     public async Task SendCriticalAlertAsync(string to,string driverName,string vehiclePlate,string message,
         string eventType,string mapLink,string driverImgUrl,string roadImgUrl,Guid eventId,double speed,string driverProfilePicUrl ,  string deviceId)            

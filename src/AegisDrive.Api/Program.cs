@@ -1,12 +1,10 @@
 using AegisDrive.Api.Contracts;
-using AegisDrive.Api.Contracts.Events;
 using AegisDrive.Api.DataBase;
 using AegisDrive.Api.Extensions;
 using AegisDrive.Api.Features.Ingestion.Consumers;
 using AegisDrive.Api.Shared;
 using AegisDrive.Api.Shared.Email;
 using AegisDrive.Api.Shared.Services;
-using AegisDrive.Infrastructure.Services.Notification.Templates;
 using Amazon;
 using Amazon.S3;
 using Amazon.SimpleEmail;
@@ -23,79 +21,93 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-builder.Services.AddOpenApi();
-builder.Services.AddEndpointsApiExplorer();
-
-// 1. CONFIGURE SWAGGER
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-
-
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                        },
-                        new string[] {}
-                    }
-                });
-
-
-});
-
-
-
-builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions()); 
-
-// --- APPLICATION CONFIGURATION ---
-
+// =================================================================
+// 1. CONFIGURATION & SETTINGS
+// =================================================================
+builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.ConfigurationSection));
-
-
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.Configure<S3Settings>(builder.Configuration.GetSection(S3Settings.SectionName));
 builder.Services.Configure<SqsSettings>(builder.Configuration.GetSection(SqsSettings.SectionName));
 
 
-builder.Services.AddAWSService<IAmazonSQS>(); // By Default Singleton
-//builder.Services.AddSingleton<IAmazonSQS>();
-builder.Services.AddHostedService<CriticalEventSqsConsumer>();
+// =================================================================
+// 2. INFRASTRUCTURE (Database, Redis, AWS)
+// =================================================================
 
-
-
-
-
-//add aws service 
-builder.Services.AddAWSService<IAmazonSimpleEmailService>();
-
-builder.Services.AddKeyedScoped<INotificationService, SesNotificationService>("Email");
-
-// --- DATABASE & IDENTITY ---
+// Database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Redis Cache
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
+if (string.IsNullOrEmpty(redisConnectionString))
+    throw new ArgumentNullException("RedisConnection string is missing in configuration");
 
-// LOGGING
-builder.Services.AddLogging();
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
+
+
+// AWS Services
+builder.Services.AddAWSService<IAmazonSQS>();
+builder.Services.AddAWSService<IAmazonSimpleEmailService>();
 
 
 
 
-// 2. CONFIGURE JWT AUTHENTICATION
+// S3 Service (Manual registration to inject custom settings if needed, or use AddAWSService<IAmazonS3>)
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
+    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region) };
+    return new AmazonS3Client(config);
+});
+
+
+
+
+// =================================================================
+// 3. APPLICATION SERVICES (DI)
+// =================================================================
+
+// Generic Repositories & Helpers
+builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
+builder.Services.AddScoped<IDbIntializer, DbIntializer>();
+builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
+
+// Notifications
+// Register as Default AND Keyed to prevent "Unable to resolve" errors
+builder.Services.AddScoped<INotificationService, SesNotificationService>();
+builder.Services.AddKeyedScoped<INotificationService, SesNotificationService>("Email");
+
+// Background Workers (SQS Consumers)
+builder.Services.AddHostedService<CriticalEventSqsConsumer>();
+builder.Services.AddHostedService<SafetyEventSqsConsumer>();
+
+
+// =================================================================
+// 4. LIBRARIES (MediatR, Carter, Validation)
+// =================================================================
+var assembly = typeof(Program).Assembly;
+
+builder.Services.AddMediatR(cfg => {
+    cfg.RegisterServicesFromAssembly(assembly);
+    // Register Transactional Middleware
+    cfg.AddOpenBehavior(typeof(TransactionalMiddleware.TransactionPipelineBehavior<,>));
+});
+
+builder.Services.AddValidatorsFromAssembly(assembly);
+builder.Services.AddCarter(configurator: config => config.WithValidatorLifetime(ServiceLifetime.Scoped));
+
+
+// =================================================================
+// 5. API & SECURITY (Swagger, Auth)
+// =================================================================
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
+
+// Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -114,57 +126,53 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
     };
 });
-
 builder.Services.AddAuthorization();
+builder.Services.AddLogging();
 
-// --- CUSTOM APPLICATION SERVICES ---
-//builder.Services.AddScoped<ITokenProvider, JwtTokenProvider>();
-builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
-builder.Services.AddScoped<IDbIntializer, DbIntializer>();
-builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
-
-
-
-// --- EXTERNAL SERVICES (AWS, REDIS) ---
-builder.Services.AddSingleton<IAmazonS3>(sp =>
+// Swagger UI
+builder.Services.AddSwaggerGen(options =>
 {
-    var s3Settings = sp.GetRequiredService<IOptions<S3Settings>>().Value;
-    var config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.Region) };
-    return new AmazonS3Client(config);
+    // Fix schema conflicts (Command vs Command)
+    options.CustomSchemaIds(type => type.ToString().Replace("+", "_"));
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            new string[] {}
+        }
+    });
 });
 
 
-
-var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
-if (string.IsNullOrEmpty(redisConnectionString))    
-    throw new ArgumentNullException("RedisConnection string is missing in configuration");
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
-
-
-
-
-
-// --- LIBRARIES ---
-var assembly = typeof(Program).Assembly;
-
-builder.Services.AddCarter(configurator: config => config.WithValidatorLifetime(ServiceLifetime.Scoped));
-builder.Services.AddMediatR(cfg => {
-    cfg.RegisterServicesFromAssembly(assembly);
-
-    // Register the Transaction Pipeline Behavior (using the shared IResult marker)
-    cfg.AddOpenBehavior(typeof(TransactionalMiddleware.TransactionPipelineBehavior<,>));
-});
-builder.Services.AddValidatorsFromAssembly(assembly);
-
-
+// =================================================================
+// 6. PIPELINE CONFIGURATION
+// =================================================================
 var app = builder.Build();
 
+
+
+// Initialization
 await app.IntializeDataBase();
 
-
-//var emailService = app.Services.GetRequiredService<IAmazonSimpleEmailService>();
-//await EmailTemplates.InitializeTemplates(emailService);
+// Initialize Email Templates (Uncomment in Dev if needed)
+// if (app.Environment.IsDevelopment()) {
+//    using var scope = app.Services.CreateScope();
+//    var emailService = scope.ServiceProvider.GetRequiredService<IAmazonSimpleEmailService>();
+//    await EmailTemplates.InitializeTemplates(emailService);
+// }
 
 if (app.Environment.IsDevelopment())
 {
@@ -177,14 +185,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapCarter();
 
-
-
 app.Run();
-
-

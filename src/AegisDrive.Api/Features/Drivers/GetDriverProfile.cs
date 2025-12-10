@@ -42,7 +42,6 @@ public static class GetDriverProfile
             if (driverDto is null)
             {
                 driverDto = await _driversRepository.GetAll()
-                    .AsNoTracking()
                     .Where(d => d.Id == request.DriverId)
                     .Select(d => new GetDriverProfileResponse(
                         d.FullName,
