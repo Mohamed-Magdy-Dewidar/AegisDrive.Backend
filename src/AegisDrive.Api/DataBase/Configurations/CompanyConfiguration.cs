@@ -1,7 +1,5 @@
 ﻿using AegisDrive.Api.Entities;
 using Microsoft.EntityFrameworkCore;
-
-
 namespace AegisDrive.Api.DataBase.Configurations;
 
 public class CompanyConfiguration : IEntityTypeConfiguration<Company>

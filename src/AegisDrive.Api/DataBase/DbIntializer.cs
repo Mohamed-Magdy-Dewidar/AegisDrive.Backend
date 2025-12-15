@@ -1,6 +1,9 @@
 ﻿
 using AegisDrive.Api.Contracts;
 using AegisDrive.Api.Entities;
+using AegisDrive.Api.Entities.Identity;
+using AegisDrive.Api.Shared.Auth;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -12,17 +15,20 @@ public class DbIntializer : IDbIntializer
 {
     private readonly AppDbContext _context;
     private readonly ILogger<DbIntializer> _logger;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
 
 
 
-
-
-
-    public DbIntializer(AppDbContext context , ILogger<DbIntializer> logger)
+    public DbIntializer(AppDbContext context,ILogger<DbIntializer> logger,UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager)
     {
         _context = context;
         _logger = logger;
+        _userManager = userManager;
+        _roleManager = roleManager;
     }
+
 
     public async Task MigrateAsync()
     {
@@ -38,6 +44,90 @@ public class DbIntializer : IDbIntializer
         }
 
     }
+
+
+    public async Task IdentitySeedDataAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Seeding Identity Data...");
+
+            // A. Seed Roles
+            string[] roles = { AuthConstants.Roles.Manager, AuthConstants.Roles.Individual };
+
+            foreach (var role in roles)
+            {
+                if (!await _roleManager.RoleExistsAsync(role))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(role));
+                    _logger.LogInformation($"Created Role: {role}");
+                }
+            }
+
+            // B. Ensure a Default Company Exists (For the Manager)
+            // We check if any company exists (from SeedDataAsync). If not, we create a fallback.
+            Company? defaultCompany = await _context.Companies.FirstOrDefaultAsync();
+            if (defaultCompany == null)
+            {
+                defaultCompany = new Company
+                {
+                    Name = "Aegis Logistics Default",
+                };
+                _context.Companies.Add(defaultCompany);
+                await _context.SaveChangesAsync();
+            }
+
+            // C. Seed Users
+
+            // 1. Manager User (Must belong to a Company)
+            var managerEmail = "manager@aegis.com";
+            if (await _userManager.FindByEmailAsync(managerEmail) == null)
+            {
+                var manager = new ApplicationUser
+                {
+                    UserName = managerEmail,
+                    Email = managerEmail,
+                    FullName = "Sarah Connor",
+                    EmailConfirmed = true,
+                    CompanyId = defaultCompany.Id // Linked to Company
+                };
+
+                var result = await _userManager.CreateAsync(manager, "Password123!");
+                if (result.Succeeded)
+                {
+                    await _userManager.AddToRoleAsync(manager, AuthConstants.Roles.Manager);
+                    _logger.LogInformation("Seeded Manager User.");
+                }
+            }
+
+            // 2. Individual/Driver User (No Company)
+            var driverEmail = "driver@gmail.com";
+            if (await _userManager.FindByEmailAsync(driverEmail) == null)
+            {
+                var driver = new ApplicationUser
+                {
+                    UserName = driverEmail,
+                    Email = driverEmail,
+                    FullName = "Max Rockatansky",
+                    EmailConfirmed = true,
+                    CompanyId = null // Individual
+                };
+
+                var result = await _userManager.CreateAsync(driver, "Password123!");
+                if (result.Succeeded)
+                {
+                    await _userManager.AddToRoleAsync(driver, AuthConstants.Roles.Individual);
+                    _logger.LogInformation("Seeded Individual User.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding identity data.");
+            throw;
+        }
+    }
+        
 
     public async Task SeedDataAsync()
     {

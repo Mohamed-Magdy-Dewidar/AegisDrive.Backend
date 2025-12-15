@@ -12,6 +12,7 @@ public static class MigrationExtensions
 
         var DataSeedingObj = Scope.ServiceProvider.GetRequiredService<IDbIntializer>();
         await DataSeedingObj.MigrateAsync();        
-        await DataSeedingObj.SeedDataAsync();        
+        await DataSeedingObj.SeedDataAsync();
+        await DataSeedingObj.IdentitySeedDataAsync();
     }
 }

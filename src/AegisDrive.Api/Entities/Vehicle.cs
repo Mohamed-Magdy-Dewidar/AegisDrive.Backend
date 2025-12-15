@@ -1,4 +1,6 @@
 ﻿using AegisDrive.Api.Entities.Enums;
+using AegisDrive.Api.Entities.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace AegisDrive.Api.Entities;
@@ -13,7 +15,15 @@ public class Vehicle : BaseEntity<int>
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public VehicleStatus Status { get; set; } = VehicleStatus.Active;
-        
+
+
+
+    // --- NEW: Link to Individual User (The Owner) ---
+    public string? OwnerUserId { get; set; } // The String GUID from Identity
+
+    [ForeignKey(nameof(OwnerUserId))]
+    public ApplicationUser? OwnerUser { get; set; }
+
     public Company? Company { get; set; }
     public Driver? CurrentDriver { get; set; } // Optional navigation
     public ICollection<Device> Devices { get; set; } = new List<Device>();

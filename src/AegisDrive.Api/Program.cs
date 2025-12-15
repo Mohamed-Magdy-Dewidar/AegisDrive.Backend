@@ -1,8 +1,11 @@
 using AegisDrive.Api.Contracts;
 using AegisDrive.Api.DataBase;
+using AegisDrive.Api.Entities.Identity;
 using AegisDrive.Api.Extensions;
 using AegisDrive.Api.Features.Ingestion.Consumers;
+using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
+using AegisDrive.Api.Shared.Auth;
 using AegisDrive.Api.Shared.Email;
 using AegisDrive.Api.Shared.Services;
 using Amazon;
@@ -12,6 +15,7 @@ using Amazon.SQS;
 using Carter;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -40,6 +44,12 @@ builder.Services.Configure<SqsSettings>(builder.Configuration.GetSection(SqsSett
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
+builder.Services.AddIdentityCore<ApplicationUser>(options => { /* Identity options here */ })
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>();
+
+
 // Redis Cache
 var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection");
 if (string.IsNullOrEmpty(redisConnectionString))
@@ -66,15 +76,23 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 
 
 
+// SIGNALR
+builder.Services.AddSignalR();
+
+
 
 // =================================================================
 // 3. APPLICATION SERVICES (DI)
 // =================================================================
 
 // Generic Repositories & Helpers
+builder.Services.AddScoped<ITokenProvider, JwtTokenProvider>();
 builder.Services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
 builder.Services.AddScoped<IDbIntializer, DbIntializer>();
 builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
+
+
+
 
 // Notifications
 // Register as Default AND Keyed to prevent "Unable to resolve" errors
@@ -125,9 +143,29 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]!))
     };
+
+    // NEW: Allow SignalR to authenticate via Query String
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // If the request is for the Hub...
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/fleet"))
+            {
+                // Read the token from the URL
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 builder.Services.AddAuthorization();
+
 builder.Services.AddLogging();
+
 
 // Swagger UI
 builder.Services.AddSwaggerGen(options =>
@@ -157,6 +195,18 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
+
+// Cors
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder
+            .SetIsOriginAllowed((host) => true) // Allows any origin (including file system)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials()); // Essential for SignalR
+});
+
 // =================================================================
 // 6. PIPELINE CONFIGURATION
 // =================================================================
@@ -185,8 +235,20 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ---------------------------------------------------------
+// CORS MUST BE HERE (Before Auth & SignalR)
+// ---------------------------------------------------------
+app.UseCors("AllowAll");
+
+
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapCarter();
+
+
+// SignalR Hubs
+app.MapHub<FleetHub>("/hubs/fleet");
 
 app.Run();

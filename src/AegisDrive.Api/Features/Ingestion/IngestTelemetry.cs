@@ -1,10 +1,14 @@
 ﻿using AegisDrive.Api.Contracts;
+using AegisDrive.Api.Contracts.RealTime;
+using AegisDrive.Api.DataBase;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
+using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared.MarkerInterface;
 using AegisDrive.Api.Shared.ResultEndpoint;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -13,7 +17,7 @@ namespace AegisDrive.Api.Features.Ingestion;
 
 public static class IngestTelemetry
 {
-
+    // 1. Validator
     public class Validator : AbstractValidator<Command>
     {
         public Validator()
@@ -21,48 +25,58 @@ public static class IngestTelemetry
             RuleFor(x => x.DeviceId).NotEmpty();
             RuleFor(x => x.Latitude).InclusiveBetween(-90, 90);
             RuleFor(x => x.Longitude).InclusiveBetween(-180, 180);
-            RuleFor(x => x.SpeedKmh).GreaterThanOrEqualTo(0);
             RuleFor(x => x.EventType).NotEmpty();
         }
     }
 
+    // 2. Command
     public record Command(string DeviceId, double Latitude, double Longitude, double SpeedKmh, string EventType, DateTime Timestamp) : ICommand<Result>;
 
-    private record DeviceContextCache(int VehicleId, int? CompanyId, string VehiclePlateNumber, string VehicleStatus);
+    // 3. Cache Model (Stores the String ID now)
+    private record DeviceContextCache(
+        int VehicleId,
+        int? CompanyId,
+        string? OwnerUserId, // <--- Storing the GUID here
+        string PlateNumber,
+        string Status
+    );
 
+    // 4. Handler
     internal sealed class Handler : IRequestHandler<Command, Result>
     {
         private readonly IGenericRepository<Device, string> _deviceRepo;
         private readonly IGenericRepository<TelemetryEvent, Guid> _telemetryRepo;
         private readonly IDatabase _redis;
-        
+        private readonly IHubContext<FleetHub, IFleetClient> _hubContext;
+
         public Handler(
             IGenericRepository<Device, string> deviceRepo,
             IGenericRepository<TelemetryEvent, Guid> telemetryRepo,
-            IConnectionMultiplexer redisMux)
+            IConnectionMultiplexer redisMux,
+            IHubContext<FleetHub, IFleetClient> hubContext)
         {
             _deviceRepo = deviceRepo;
             _telemetryRepo = telemetryRepo;
             _redis = redisMux.GetDatabase();
+            _hubContext = hubContext;
         }
 
         public async Task<Result> Handle(Command request, CancellationToken token)
         {
-            // A. GET DEVICE CONTEXT (Cache-Aside Pattern)
-            // Goal: Avoid DB hits for high-frequency telemetry (10Hz)
+            // --- A. GET CONTEXT (Redis Cache) ---
             string mappingKey = $"device:{request.DeviceId}:map";
-            DeviceContextCache? deviceContext = null;
+            DeviceContextCache? context = null;
 
-            // 1. Try Redis
             var cachedMapping = await _redis.StringGetAsync(mappingKey);
             if (!cachedMapping.IsNull)
             {
-                deviceContext = JsonSerializer.Deserialize<DeviceContextCache>(cachedMapping.ToString());
+                context = JsonSerializer.Deserialize<DeviceContextCache>(cachedMapping.ToString());
             }
 
-            // 2. Fallback to DB (Only happens once per hour per device)
-            if (deviceContext == null)
+            // --- B. FALLBACK TO DB ---
+            if (context == null)
             {
+                // We fetch the 'OwnerUserId' (String) here
                 var deviceDto = await _deviceRepo.GetAll()
                     .AsNoTracking()
                     .Where(d => d.Id == request.DeviceId)
@@ -70,6 +84,7 @@ public static class IngestTelemetry
                     {
                         d.VehicleId,
                         d.Vehicle!.CompanyId,
+                        d.Vehicle.OwnerUserId, // <--- NEW COLUMN
                         d.Vehicle.PlateNumber,
                         d.Vehicle.Status
                     })
@@ -78,52 +93,76 @@ public static class IngestTelemetry
                 if (deviceDto == null || deviceDto.VehicleId == null)
                     return Result.Failure(new Error("Device.Unknown", "Device not linked"));
 
-                // Create Cache Object
-                deviceContext = new DeviceContextCache(
+                context = new DeviceContextCache(
                     deviceDto.VehicleId.Value,
                     deviceDto.CompanyId,
+                    deviceDto.OwnerUserId?.ToLower(),
                     deviceDto.PlateNumber ?? "Unknown",
                     deviceDto.Status.ToString());
 
-
-                // Save to Redis (Long TTL because Device->Vehicle mapping rarely changes)
-                await _redis.StringSetAsync(mappingKey, JsonSerializer.Serialize(deviceContext), TimeSpan.FromHours(1));
+                // Cache for 1 hour
+                await _redis.StringSetAsync(mappingKey, JsonSerializer.Serialize(context), TimeSpan.FromHours(1));
             }
 
-            // B. UPDATE LIVE MAP (Redis Hash)
-            string liveKey = $"vehicle:{deviceContext.VehicleId}:live";
-
-
-            // Since we have the context cached, we can write the FULL hash (including Plate/Status).
-            // This prevents "Ghost Vehicles" (missing metadata) if the live key expired.
+            // --- C. UPDATE LIVE MAP (Redis Hash) ---
+            string liveKey = $"vehicle:{context.VehicleId}:live";
             var hashEntries = new HashEntry[]
             {
                 new HashEntry("Latitude", request.Latitude),
                 new HashEntry("Longitude", request.Longitude),
                 new HashEntry("SpeedKmh", request.SpeedKmh),
-                new HashEntry("LastUpdateUtc", request.Timestamp.ToString("o")),
-                new HashEntry("PlateNumber", deviceContext.VehiclePlateNumber), 
-                new HashEntry("Status", deviceContext.VehicleStatus)
+                new HashEntry("PlateNumber", context.PlateNumber),
+                new HashEntry("Status", context.Status)
             };
-
             await _redis.HashSetAsync(liveKey, hashEntries);
             await _redis.KeyExpireAsync(liveKey, TimeSpan.FromMinutes(5));
 
+            // --- D. SAVE EVENT TO SQL ---
             Enum.TryParse<TelemetryEventType>(request.EventType, true, out var eventType);
             var telemetryEvent = new TelemetryEvent
             {
                 DeviceId = request.DeviceId,
-                VehicleId = deviceContext.VehicleId,
+                VehicleId = context.VehicleId,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
                 SpeedKmh = request.SpeedKmh,
                 Timestamp = request.Timestamp,
                 EventType = eventType
             };
-
             await _telemetryRepo.AddAsync(telemetryEvent);
             await _telemetryRepo.SaveChangesAsync(token);
+
+            // --- E. PUSH TO SIGNALR ---
+            var update = new VehicleTelemetryUpdate(
+                context.VehicleId,
+                context.PlateNumber,
+                request.Latitude,
+                request.Longitude,
+                request.SpeedKmh,
+                request.EventType.ToString(),
+                DateTime.UtcNow
+            );
+
+
+            // 1. Notify Company Managers
+            if (context.CompanyId.HasValue)
+            {
+                var groupName = $"Company_{context.CompanyId}".ToLower();
+                await _hubContext.Clients
+                    .Group(groupName)
+                    .ReceiveVehicleUpdate(update);
+            }
+            // 2. Notify Individual Owner
+            else if (!string.IsNullOrEmpty(context.OwnerUserId))
+            {
+                // "user_56d5e237-c1bf-417a-a2f2-0a480be93754"
+                var groupName = $"User_{context.OwnerUserId}".ToLower();
+                await _hubContext.Clients
+                    .Group(groupName)
+                    .ReceiveVehicleUpdate(update);
+            }
+
             return Result.Success();
         }
-    } 
+    }    
 }

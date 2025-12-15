@@ -4,6 +4,7 @@ using AegisDrive.Api.DataBase;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AegisDrive.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251214111435_InitialIdentity")]
+    partial class InitialIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -438,9 +441,6 @@ namespace AegisDrive.Api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("OwnerUserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("PlateNumber")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -461,8 +461,6 @@ namespace AegisDrive.Api.Migrations
                     b.HasIndex("CompanyId");
 
                     b.HasIndex("CurrentDriverId");
-
-                    b.HasIndex("OwnerUserId");
 
                     b.HasIndex("PlateNumber")
                         .IsUnique();
@@ -645,15 +643,9 @@ namespace AegisDrive.Api.Migrations
                         .HasForeignKey("CurrentDriverId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("AegisDrive.Api.Entities.Identity.ApplicationUser", "OwnerUser")
-                        .WithMany()
-                        .HasForeignKey("OwnerUserId");
-
                     b.Navigation("Company");
 
                     b.Navigation("CurrentDriver");
-
-                    b.Navigation("OwnerUser");
                 });
 
             modelBuilder.Entity("AegisDrive.Api.Entities.VehicleAssignment", b =>
