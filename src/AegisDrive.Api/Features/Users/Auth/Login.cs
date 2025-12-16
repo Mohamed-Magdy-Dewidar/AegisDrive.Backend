@@ -8,7 +8,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 
-namespace AegisDrive.Api.Features.Users;
+namespace AegisDrive.Api.Features.Users.Auth;
 
 public static class Login
 {

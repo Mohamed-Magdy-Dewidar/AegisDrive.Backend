@@ -1,8 +1,16 @@
 ﻿using AegisDrive.Api.Contracts.Users;
+using AegisDrive.Api.DataBase;
+using AegisDrive.Api.Entities.Identity;
+using AegisDrive.Api.Features.Users.Auth;
+using AegisDrive.Api.Shared.Auth;
+using AegisDrive.Api.Shared.ResultEndpoint;
 using Carter;
 using MediatR;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
-namespace AegisDrive.Api.Features.Users.Endpoints;
+namespace AegisDrive.Api.Features.Users.Auth.Endpoints;
 
 public class EndPoints : ICarterModule
 {
@@ -34,9 +42,6 @@ public class EndPoints : ICarterModule
         })
           .WithTags("Auth")
           .AllowAnonymous();
-
-
-
 
 
     }

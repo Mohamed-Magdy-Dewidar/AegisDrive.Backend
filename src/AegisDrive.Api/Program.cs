@@ -207,8 +207,10 @@ builder.Services.AddCors(options =>
             .AllowCredentials()); // Essential for SignalR
 });
 
+
+
 // =================================================================
-// 6. PIPELINE CONFIGURATION
+// 6. PIPELINE CONFIGURATION                                           
 // =================================================================
 var app = builder.Build();
 
