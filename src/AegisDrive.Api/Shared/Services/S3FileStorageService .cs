@@ -58,6 +58,9 @@ namespace AegisDrive.Api.Shared.Services
         {
             // No try-catch here. If URL generation fails, it's an unexpected error
             // and the handler needs to know about it. Returning "" or null would hide the problem.
+            if(string.IsNullOrEmpty(key))
+                return string.Empty;
+
             var request = new GetPreSignedUrlRequest
             {
                 BucketName = _s3Settings.BucketName,

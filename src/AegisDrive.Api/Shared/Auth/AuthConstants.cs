@@ -24,6 +24,7 @@ public static class AuthConstants
     {
         public const string CompanyId = "company_id";
         public const string FullName = "full_name";
+        public const string DriverId = "driver_id";
     }
 
     // 3. Policies (For [Authorize(Policy = ...)])
