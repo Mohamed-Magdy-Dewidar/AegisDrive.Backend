@@ -75,9 +75,9 @@ public static class CreateSafetyEvent
             {
                 // Retrieve existing event to return its paths if needed, or just return success
                 var existing = await _safetyRepository.GetByIdAsync(request.EventId);
-                return Result.Success(new CreatedSafetyEventResponse(request.EventId.ToString())
+                return Result.Success(new CreatedSafetyEventResponse(request.EventId.ToString() , request.S3DriverImagePath)
                 {
-                    Message = "Event already exists (Idempotent)."
+                    Message = "Event already processed (Idempotent)."
                 });
             }
 
@@ -151,7 +151,8 @@ public static class CreateSafetyEvent
 
 
             return Result.Success(new CreatedSafetyEventResponse(
-                safetyEvent.Id.ToString()
+                safetyEvent.Id.ToString(),
+                safetyEvent.S3DriverImagePath
             ));
         }
     }

@@ -19,71 +19,54 @@ public static class EmailTemplates
                 TemplateName = CriticalAlertTemplateName,
                 SubjectPart = "🚨 CRITICAL: {{EventType}} - {{DriverName}} ({{VehiclePlate}})",
                 HtmlPart = """
-                    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
-                        
-                        <div style="background-color: #d32f2f; color: white; padding: 25px; text-align: center;">
-                            <h1 style="margin: 0; font-size: 24px; text-transform: uppercase;">CRITICAL SAFETY ALERT</h1>
-                            <p style="margin: 5px 0 0; font-size: 16px; opacity: 0.9;">{{EventType}} Detected • Immediate Action Required</p>
+                 <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background-color: #ffffff;">
+
+                    <div style="background-color: #d32f2f; color: white; padding: 25px; text-align: center;">
+                        <h1 style="margin: 0; font-size: 24px; text-transform: uppercase;">CRITICAL SAFETY ALERT</h1>
+                        <p style="margin: 5px 0 0; font-size: 16px; opacity: 0.9;">{{EventType}} Detected • Immediate Action Required</p>
+                    </div>
+
+                    <div style="padding: 30px;">
+
+                        <div style="display: flex; align-items: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                            <div>
+                                <h2 style="margin: 0; color: #333; font-size: 20px;">{{DriverName}}</h2>
+                                <p style="margin: 5px 0 0; color: #666;">Vehicle: <strong>{{VehiclePlate}}</strong></p>
+                                </div>
                         </div>
-                        
-                        <div style="padding: 30px;">
-                            
-                            <div style="display: flex; align-items: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
-                                <img src="{{DriverProfilePicUrl}}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #f0f0f0; margin-right: 20px;" />
-                                <div>
-                                    <h2 style="margin: 0; color: #333; font-size: 20px;">{{DriverName}}</h2>
-                                    <p style="margin: 5px 0 0; color: #666;">Vehicle: <strong>{{VehiclePlate}}</strong></p>
-                                    </div>
-                            </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
-                                <div style="background-color: #fff5f5; padding: 15px; border-radius: 6px; border-left: 4px solid #d32f2f;">
-                                    <p style="margin: 0; font-size: 12px; color: #d32f2f; font-weight: bold;">INCIDENT TYPE</p>
-                                    <p style="margin: 5px 0 0; font-size: 16px; font-weight: bold; color: #333;">{{Message}}</p>
-                                </div>
-                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #2c3e50;">
-                                    <p style="margin: 0; font-size: 12px; color: #2c3e50; font-weight: bold;">TIME & SPEED</p>
-                                    <p style="margin: 5px 0 0; font-size: 16px; color: #333;">{{Timestamp}} <br/> <span style="font-size: 14px; color: #666;">@ {{Speed}} km/h</span></p>
-                                </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                            <div style="background-color: #fff5f5; padding: 15px; border-radius: 6px; border-left: 4px solid #d32f2f;">
+                                <p style="margin: 0; font-size: 12px; color: #d32f2f; font-weight: bold;">INCIDENT TYPE</p>
+                                <p style="margin: 5px 0 0; font-size: 16px; font-weight: bold; color: #333;">{{Message}}</p>
                             </div>
-
-                            <div style="margin-bottom: 30px;">
-                                <p style="margin: 0 0 10px; font-weight: bold; color: #555;">📍 Incident Location</p>
-                                <a href="{{MapLink}}" style="display: block; background-color: #e3f2fd; color: #0277bd; padding: 15px; text-decoration: none; border-radius: 6px; text-align: center; font-weight: bold; border: 1px dashed #0277bd;">
-                                    Open GPS Location in Maps ↗
-                                </a>
-                            </div>
-
-                            <h3 style="margin: 0 0 15px; color: #333; border-top: 1px solid #eee; padding-top: 20px;">📸 Incident Evidence</h3>
-                            <div style="display: flex; gap: 15px;">
-                                <div style="flex: 1;">
-                                    <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase;">Driver State</p>
-                                    <div style="position: relative; padding-bottom: 75%; height: 0; overflow: hidden; border-radius: 6px; border: 1px solid #ddd;">
-                                        <img src="{{DriverImageUrl}}" alt="Driver Face" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" />
-                                    </div>
-                                </div>
-                                <div style="flex: 1;">
-                                    <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase;">Road Context</p>
-                                    <div style="position: relative; padding-bottom: 75%; height: 0; overflow: hidden; border-radius: 6px; border: 1px solid #ddd;">
-                                        <img src="{{RoadImageUrl}}" alt="Road View" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="margin-top: 30px; text-align: center;">
-                                <a href="https://dashboard.aegisdrive.com/incidents/{{EventId}}" 
-                                   style="background-color: #d32f2f; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
-                                    View Full Report
-                                </a>
+                            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #2c3e50;">
+                                <p style="margin: 0; font-size: 12px; color: #2c3e50; font-weight: bold;">TIME & SPEED</p>
+                                <p style="margin: 5px 0 0; font-size: 16px; color: #333;">{{Timestamp}} <br/> <span style="font-size: 14px; color: #666;">@ {{Speed}} km/h</span></p>
                             </div>
                         </div>
-                        
-                        <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-                            <p style="margin: 0;">AegisDrive Automated Safety System</p>
-                            <p style="margin: 5px 0 0;">Vehicle ID: {{VehiclePlate}} • Device: {{DeviceId}}</p>
+
+                        <div style="margin-bottom: 30px;">
+                            <p style="margin: 0 0 10px; font-weight: bold; color: #555;">📍 Incident Location</p>
+                            <a href="{{MapLink}}" style="display: block; background-color: #e3f2fd; color: #0277bd; padding: 15px; text-decoration: none; border-radius: 6px; text-align: center; font-weight: bold; border: 1px dashed #0277bd;">
+                                Open GPS Location in Maps ↗
+                            </a>
+                        </div>
+
+                        <div style="margin-top: 30px; text-align: center;">
+                            <a href="https://dashboard.aegisdrive.com/incidents/{{EventId}}" 
+                                style="background-color: #d32f2f; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
+                                View Evidence & Full Report
+                            </a>
                         </div>
                     </div>
-                    """,
+
+                    <div style="background-color: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+                        <p style="margin: 0;">AegisDrive Automated Safety System</p>
+                        <p style="margin: 5px 0 0;">Vehicle ID: {{VehiclePlate}} • Device: {{DeviceId}}</p>
+                    </div>
+                </div>
+                """,                
                 TextPart = """
                     CRITICAL SAFETY ALERT
                     =====================
@@ -96,11 +79,7 @@ public static class EmailTemplates
                     Time: {{Timestamp}}
                     
                     Location Link: {{MapLink}}
-                    
-                    EVIDENCE:
-                    Driver Image: {{DriverImageUrl}}
-                    Road Image: {{RoadImageUrl}}
-                    
+                                                            
                     Login to dashboard for full details.
                     """
             }

@@ -1,6 +1,3 @@
-﻿namespace AegisDrive.Api.Features.Fleet;
+﻿namespace AegisDrive.Api.Contracts.Vehicles;
 
-public static partial class GetVehicle
-{
-    public record GetVehicleResponse(int Id,string PlateNumber,string? Model,string Status,int? CurrentDriverId,int? CompanyId);
-}
+public record GetVehicleResponse(int Id,string PlateNumber,string? Model,string Status,int? CurrentDriverId,int? CompanyId , string? OwnerUserId);

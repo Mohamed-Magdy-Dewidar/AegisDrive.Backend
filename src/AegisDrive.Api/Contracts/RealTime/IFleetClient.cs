@@ -10,4 +10,8 @@ public interface IFleetClient
 
     // The Notification Bell/Popup will listen to this
     Task ReceiveCriticalAlert(CriticalAlertNotification alert);
+
+    Task ReceiveHighLevelAlert(HighAlertNotification alert);
+
+
 }

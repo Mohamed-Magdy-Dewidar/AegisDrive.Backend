@@ -1,6 +1,6 @@
 ﻿namespace AegisDrive.Api.Contracts.RealTime;
 
-public record CriticalAlertNotification(
+public record HighAlertNotification(
     Guid EventId,
     string PlateNumber,
     string DriverState,     // e.g., "Microsleep"

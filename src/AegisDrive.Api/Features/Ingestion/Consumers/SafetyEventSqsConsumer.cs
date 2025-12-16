@@ -1,5 +1,6 @@
 ﻿using AegisDrive.Api.Contracts;
 using AegisDrive.Api.Contracts.Events;
+using AegisDrive.Api.Contracts.RealTime;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Entities.Enums.Driver;
@@ -7,11 +8,13 @@ using AegisDrive.Api.Features.Drivers;
 using AegisDrive.Api.Features.Fleet;
 using AegisDrive.Api.Features.Monitoring;
 using AegisDrive.Api.Features.SafetyEvents;
-// using AegisDrive.Api.Hubs; // SignalR - Commented out
+using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
+using AegisDrive.Api.Shared.Email;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -25,20 +28,22 @@ public class SafetyEventSqsConsumer : BackgroundService
     private readonly string _queueUrl;
     private readonly IServiceProvider _serviceProvider;
     private readonly IConnectionMultiplexer _redisMux;
+    private readonly IHubContext<FleetHub, IFleetClient> _hubContext; // [NEW] SignalR Context
 
     public SafetyEventSqsConsumer(
         IAmazonSQS sqsClient,
         IOptions<SqsSettings> sqsSettings,
         ILogger<SafetyEventSqsConsumer> logger,
         IConnectionMultiplexer redisMux,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IHubContext<FleetHub, IFleetClient> hubContext) // [NEW] Injected here
     {
         _sqsClient = sqsClient;
-        // Connect to the NORMAL queue (High/Medium events)
         _queueUrl = sqsSettings.Value.DrowsinessEventsQueueUrl;
         _logger = logger;
         _redisMux = redisMux;
         _serviceProvider = serviceProvider;
+        _hubContext = hubContext;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -52,8 +57,8 @@ public class SafetyEventSqsConsumer : BackgroundService
                 var request = new ReceiveMessageRequest
                 {
                     QueueUrl = _queueUrl,
-                    MaxNumberOfMessages = 10, // Process batches for efficiency
-                    WaitTimeSeconds = 20,     // Long polling
+                    MaxNumberOfMessages = 10,
+                    WaitTimeSeconds = 20,
                     MessageAttributeNames = new List<string> { "All" }
                 };
 
@@ -61,17 +66,15 @@ public class SafetyEventSqsConsumer : BackgroundService
 
                 foreach (var sqsMessage in response.Messages ?? new List<Message>())
                 {
-                    // Process message
                     if (await ProcessMessageAsync(sqsMessage, stoppingToken))
                     {
-                        // Delete on success
                         await _sqsClient.DeleteMessageAsync(_queueUrl, sqsMessage.ReceiptHandle, stoppingToken);
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error polling Safety Events queue");  
+                _logger.LogError(ex, "❌ Error polling Safety Events queue");
                 await Task.Delay(5000, stoppingToken);
             }
         }
@@ -81,14 +84,12 @@ public class SafetyEventSqsConsumer : BackgroundService
     {
         try
         {
-
-            _logger.LogInformation("📩 Received  Event: MessageId={MessageId}", sqsMessage.MessageId);
+            _logger.LogInformation("📩 Received Event: MessageId={MessageId}", sqsMessage.MessageId);
 
             var message = JsonSerializer.Deserialize<DrowsinessEventMessage>(
                 sqsMessage.Body,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
             );
-  
 
             if (message == null) return false;
 
@@ -97,42 +98,32 @@ public class SafetyEventSqsConsumer : BackgroundService
             var safetyRepository = scope.ServiceProvider.GetRequiredService<IGenericRepository<SafetyEvent, Guid>>();
             var notificationService = scope.ServiceProvider.GetRequiredKeyedService<INotificationService>("Email");
             var fileStorageService = scope.ServiceProvider.GetRequiredService<IFileStorageService>();
-            // var hubContext = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<FleetHub>>(); // SignalR - Commented out
             var redis = _redisMux.GetDatabase();
 
-            if (await safetyRepository.AnyAsync(sf => sf.Id == message.EventId, token))
-            {
-                return true;
-            }
+            // 1. Idempotency
+            if (await safetyRepository.AnyAsync(sf => sf.Id == message.EventId, token)) return true;
 
-            // 3. Enrichment (Vehicle/Driver)
+            // 2. Fetch Data
             var vehicleResult = await sender.Send(new GetVehicle.Query(message.VehicleId), token);
-            if (vehicleResult.IsFailure || vehicleResult.Value.CurrentDriverId == null)
-            {
-                _logger.LogWarning("Skipping event {Id}: Vehicle/Driver not found.", message.EventId);
-                return true; // Mark handled to remove from queue
-            }
+            if (vehicleResult.IsFailure || vehicleResult.Value.CurrentDriverId == null) return true;
             var vehicleData = vehicleResult.Value;
             var driverId = vehicleData.CurrentDriverId.Value;
 
             var driverResult = await sender.Send(new GetDriverProfile.Query(driverId), token);
             var driverProfile = driverResult.Value;
 
-            // 4. Get Location (Redis)
+            // 3. Live Context
             var liveState = await sender.Send(new GetVehicleLiveState.Query(message.VehicleId), token);
             double speed = liveState.Value?.LiveLocation?.SpeedKmh ?? 0;
             string mapLink = liveState.Value?.LiveLocation != null
                 ? GpsLinkUtility.GenerateMapsLink(liveState.Value.LiveLocation.Latitude, liveState.Value.LiveLocation.Longitude)
                 : "Location Unavailable";
 
-            // 5. Determine Alert Level & State
+            // 4. Save to DB
             Enum.TryParse<AlertLevel>(message.AlertLevel, true, out var alertLevel);
             Enum.TryParse<DriverState>(message.DriverState, true, out var driverState);
             DateTime eventTimestamp = message.GetParsedTimestamp();
 
-            // 6. Save Event (Reuse the CreateCritical logic)
-            // Note: For MEDIUM events, we might want to skip saving the Road Image to save space,
-            // but keeping it simple for now and saving everything.
             var createCommand = new CreateSafetyEvent.Command(
                 message.EventId, message.Message,
                 message.EarValue, message.MarValue, message.HeadYaw,
@@ -150,78 +141,124 @@ public class SafetyEventSqsConsumer : BackgroundService
             if (saveResult.IsFailure) return false;
 
             _logger.LogInformation("💾 Saved {Level} Event {Id}", alertLevel, message.EventId);
+            var safetyData = saveResult.Value;
 
-            // 7. Update Driver Safety Score
+            // 5. Update Score
             await sender.Send(new DeductDriverSafteyScore.Command(driverId, alertLevel), token);
 
- 
 
-            // 9. Handle Notifications based on Level
-            if (alertLevel == AlertLevel.HIGH)
+
+            // =========================================================
+            // 🚀 PARALLEL EXECUTION (SignalR & Email)
+            // =========================================================
+
+            var signalRTask = Task.Run(() => SendSignalRAlertAsync(message, vehicleData, safetyData, fileStorageService, mapLink, speed, alertLevel));
+
+            Task emailTask = Task.CompletedTask;
+            if (driverProfile?.DriverCompany != null && !string.IsNullOrEmpty(driverProfile.DriverCompany.RepresentativeEmail))
             {
-                // --- HIGH ALERT: Notify Company Only ---
-                // Rate Limit: 1 minute (Don't spam manager for every distraction)
-                string cooldownKey = $"email_high_cooldown:{driverId}";
-                bool canSend = await redis.StringSetAsync(cooldownKey, "1", TimeSpan.FromMinutes(1), When.NotExists);
-
-                if (canSend && driverProfile?.DriverCompany != null && !string.IsNullOrEmpty(driverProfile.DriverCompany.RepresentativeEmail))
-                {
-                    // Use High Alert Email Template (No Images in Email body, link to dashboard)
-                    await notificationService.SendHighAlertAsync(
-                        driverProfile.DriverCompany.RepresentativeEmail,
-                        driverProfile.FullName,
-                        vehicleData.PlateNumber,
-                        message.Message,
-                        message.DriverState, // e.g. "DISTRACTED"
-                        message.EventId,
-                        message.DeviceId
-                    );
-                    _logger.LogInformation("📧 High Alert sent to Company.");
-                }
-
-                // SignalR: Push Orange Alert to Dashboard (Commented out)
-                /*
-                if (vehicleData.CompanyId.HasValue)
-                {
-                    await hubContext.Clients.Group($"Company_{vehicleData.CompanyId}")
-                        .SendAsync("HighAlert", new { 
-                            VehicleId = vehicleData.VehicleId,
-                            Message = message.Message,
-                            DriverImage = driverImageUrl,
-                            Timestamp = eventTimestamp
-                        }, token);
-                }
-                */
+                 emailTask = Task.Run(() => SendEmailNotificationsAsync(message, vehicleData, driverProfile, notificationService, redis, alertLevel));
             }
-            else if (alertLevel == AlertLevel.MEDIUM)
-            {
-                // --- MEDIUM ALERT: Dashboard Update Only ---
-                // No Email. Just update the map status to "Fatigue Detected".
-                /*
-                if (vehicleData.CompanyId.HasValue)
-                {
-                    await hubContext.Clients.Group($"Company_{vehicleData.CompanyId}")
-                        .SendAsync("DriverStatusUpdate", new { 
-                            VehicleId = vehicleData.VehicleId,
-                            Status = "Fatigue Detected", 
-                            AlertLevel = "MEDIUM",
-                            DriverImage = driverImageUrl
-                        }, token);
-                }
-                */
-            }
+            await Task.WhenAll(signalRTask, emailTask);
 
             return true;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError("❌ JSON Parse Error: {Message}", ex.Message);
-            return false;
+
+
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "❌ Unexpected error processing safety event");
             return false;
+        }
+    }
+
+
+    private async Task SendSignalRAlertAsync(
+        DrowsinessEventMessage message,
+        AegisDrive.Api.Contracts.Vehicles.GetVehicleResponse vehicleData,
+        AegisDrive.Api.Contracts.SafetyEventsDto.CreatedSafetyEventResponse safetyData,
+        IFileStorageService fileService,
+        string mapLink,
+        double speed,
+        AlertLevel level)
+    {
+        try
+        {
+            // Both HIGH and MEDIUM events get pushed to the dashboard
+            // The Frontend uses "AlertLevel" to decide if it's Red (High) or Orange (Medium)
+            string driverImgUrl = fileService.GetPresignedUrl(safetyData.DriverImageKey ?? "");
+
+            var alertNotification = new HighAlertNotification(
+                message.EventId,
+                vehicleData.PlateNumber,
+                message.DriverState,
+                level.ToString(),
+                message.Message,
+                mapLink,
+                speed,
+                DateTime.UtcNow,
+                driverImgUrl
+            );
+
+            if (vehicleData.CompanyId.HasValue)
+            {
+                var group = $"company_{vehicleData.CompanyId}".ToLower();
+                await _hubContext.Clients.Group(group).ReceiveHighLevelAlert(alertNotification);
+                _logger.LogInformation("📡 SignalR {Level} Alert sent to Company: {Group}", level, group);
+            }
+            else if (!string.IsNullOrEmpty(vehicleData.OwnerUserId))
+            {
+                // "user_0ded8209-fe72-4c18-ae10-0fdbbaf727c8"
+                var group = $"user_{vehicleData.OwnerUserId}".ToLower();
+                await _hubContext.Clients.Group(group).ReceiveHighLevelAlert(alertNotification);
+                _logger.LogInformation("📡 SignalR {Level} Alert sent to User: {Group}", level, group);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "⚠️ SignalR Task Failed for Event {EventId}", message.EventId);
+        }
+    }
+
+    private async Task SendEmailNotificationsAsync(
+        DrowsinessEventMessage message,
+        AegisDrive.Api.Contracts.Vehicles.GetVehicleResponse vehicleData,
+        AegisDrive.Api.Contracts.Drivers.GetDriverProfileResponse? driverProfile,
+        INotificationService notificationService,
+        IDatabase redis,
+        AlertLevel level)
+    {
+        try
+        {
+            // ONLY send emails for HIGH alerts
+            if (level != AlertLevel.HIGH) return;
+
+            // Rate Limit Check
+            string cooldownKey = $"email_high_cooldown:{vehicleData.CurrentDriverId}";
+            if (!await redis.StringSetAsync(cooldownKey, "1", TimeSpan.FromMinutes(1), When.NotExists))
+            {
+                _logger.LogInformation("⏳ Email skipped (Cooldown active) for driver {DriverId}", vehicleData.CurrentDriverId);
+                return;
+            }
+
+            // Send to Company
+            if (driverProfile?.DriverCompany != null && !string.IsNullOrEmpty(driverProfile.DriverCompany.RepresentativeEmail))
+            {
+                await notificationService.SendHighAlertAsync(
+                    driverProfile.DriverCompany.RepresentativeEmail,
+                    driverProfile.FullName,
+                    vehicleData.PlateNumber,
+                    message.Message,
+                    message.DriverState,
+                    message.EventId,
+                    message.DeviceId
+                );
+                _logger.LogInformation("📧 High Alert Email sent to Company.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "⚠️ Email Task Failed for Event {EventId}", message.EventId);
         }
     }
 }

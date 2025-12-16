@@ -53,28 +53,11 @@ public class SesNotificationService : INotificationService
         await SendTemplatedEmail(to, EmailTemplates.HighAlertTemplateName, templateData);
     }
 
-    // Specialized method for Critical Alerts (Called by your CriticalEventMessageHandler)
-    public async Task SendCriticalAlertAsync(string to,string driverName,string vehiclePlate,string message,
-        string eventType,string mapLink,string driverImgUrl,string roadImgUrl,Guid eventId,double speed,string driverProfilePicUrl ,  string deviceId)            
-    {
-        var templateData = new
-        {
-            DriverName = driverName,
-            VehiclePlate = vehiclePlate,
-            Message = message,
-            EventType = eventType,
-            MapLink = mapLink,
-            DriverImageUrl = driverImgUrl,
-            RoadImageUrl = roadImgUrl,
-            EventId = eventId.ToString(),
-            Speed = speed,
-            Timestamp = DateTime.UtcNow.ToString("g"),
-            DriverProfilePicUrl = driverProfilePicUrl ?? "https://your-default-placeholder.png",
-            DeviceId = deviceId
-        };
-
-        await SendTemplatedEmail(to, EmailTemplates.CriticalAlertTemplateName, templateData);
-    }
+    //public async Task SendCriticalAlertAsync(string to,string driverName,string vehiclePlate,string message,
+    //    string eventType,string mapLink,string driverImgUrl,string roadImgUrl,Guid eventId,double speed,string driverProfilePicUrl ,  string deviceId)            
+    //{
+       
+    //}
 
 
     private async Task SendTemplatedEmail(string to, string templateName, object data)
@@ -99,4 +82,35 @@ public class SesNotificationService : INotificationService
         }
     }
 
+
+    // Specialized method for Critical Alerts (Called by your CriticalEventMessageHandler)
+    public async Task SendCriticalAlertAsync(
+        string to,
+        string driverName,
+        string vehiclePlate,
+        string message,
+        string eventType,
+        string mapLink,
+        Guid eventId,
+        double speed,
+        string deviceId
+    )
+    {
+        var templateData = new
+        {
+            DriverName = driverName,
+            VehiclePlate = vehiclePlate,
+            Message = message,
+            EventType = eventType,
+            MapLink = mapLink,
+            EventId = eventId.ToString(),
+            Speed = speed,
+            Timestamp = DateTime.UtcNow.ToString("g"),
+            DeviceId = deviceId
+        };
+
+        await SendTemplatedEmail(to, EmailTemplates.CriticalAlertTemplateName, templateData);
+    }
+
+    
 }

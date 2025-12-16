@@ -11,11 +11,8 @@ public interface INotificationService
         string message,
         string eventType,
         string mapLink,
-        string driverImgUrl,
-        string roadImgUrl,
         Guid eventId,
         double speed,
-        string driverProfilePicUrl,
         string deviceId
     );
 

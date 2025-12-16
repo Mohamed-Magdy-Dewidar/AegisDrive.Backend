@@ -1,5 +1,6 @@
 ﻿using AegisDrive.Api.Contracts;
 using AegisDrive.Api.Contracts.Events;
+using AegisDrive.Api.Contracts.RealTime;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Entities.Enums.Driver;
@@ -7,10 +8,13 @@ using AegisDrive.Api.Features.Drivers;
 using AegisDrive.Api.Features.Fleet;
 using AegisDrive.Api.Features.Monitoring;
 using AegisDrive.Api.Features.SafetyEvents;
+using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
+using AegisDrive.Api.Shared.Services;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using MediatR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -24,6 +28,7 @@ public class CriticalEventSqsConsumer : BackgroundService
     private readonly string _queueUrl;
     private readonly IServiceProvider _serviceProvider;
     private readonly IConnectionMultiplexer _redisMux;
+    private readonly IHubContext<FleetHub, IFleetClient> _hubContext;
     
     public CriticalEventSqsConsumer(
         IAmazonSQS sqsClient,
@@ -31,15 +36,17 @@ public class CriticalEventSqsConsumer : BackgroundService
         IConfiguration configuration,
         ILogger<CriticalEventSqsConsumer> logger,
         IConnectionMultiplexer redisMux,
-        IServiceProvider serviceProvider
-        )
+        IServiceProvider serviceProvider,
+        IHubContext<FleetHub, IFleetClient> hubContext)
     {
         _sqsClient = sqsClient;
         _queueUrl = SqsSettings.Value.DrowsinessCriticalEventsQueueUrl;
         _logger = logger;
         _redisMux = redisMux;
         _serviceProvider = serviceProvider;
+        _hubContext = hubContext; 
     }
+
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -208,77 +215,16 @@ public class CriticalEventSqsConsumer : BackgroundService
                 return false;
             }
             _logger.LogInformation("💾 Safety event {EventId} saved successfully", message.EventId);
+            var safetyData = SafetyEventSaveResult.Value;
+
+            var signalRTask = Task.Run(() => SendSignalRAlertAsync(
+                message, vehicleData, safetyData, _fileStorageService, mapLink, speed));
+
+            var emailTask = Task.Run(() => SendEmailNotificationsAsync(
+                message, vehicleData, driverProfile, safetyData, redis, notificationService, _fileStorageService, mapLink, speed));
+
+            await Task.WhenAll(signalRTask, emailTask);
             
-            // 6. Send Notifications (With Redis Rate Limiting)
-            string cooldownKey = $"email_cooldown:{vehicleData.CurrentDriverId}";
-
-            // Atomic check and set with 30-second cooldown
-            bool canSendEmail = await redis.StringSetAsync(
-                cooldownKey,
-                "sent",
-                TimeSpan.FromSeconds(30),
-                When.NotExists
-            );
-
-            if (!canSendEmail)
-            {
-                _logger.LogInformation("⏳ Email cooldown active for driver {DriverId}, skipping notifications",
-                    vehicleData.CurrentDriverId);
-                return true; // Event saved, just skipping notifications
-            }
-            var SafetyEventResultData = SafetyEventSaveResult.Value;
-            string driverImageUrl = _fileStorageService.GetPresignedUrl(SafetyEventResultData.DriverImageKey ?? "");
-            string roadImageUrl = _fileStorageService.GetPresignedUrl(SafetyEventResultData.RoadImageKey ?? "");
-            string? profilePicUrl = string.IsNullOrEmpty(driverProfile?.PictureUrl) ? null : driverProfile.PictureUrl;
-
-
-            // Send to Company Representative
-            if (driverProfile?.DriverCompany != null && !string.IsNullOrEmpty(driverProfile?.DriverCompany?.RepresentativeEmail))
-            {
-                await notificationService.SendCriticalAlertAsync(
-                    driverProfile.DriverCompany.RepresentativeEmail,
-                    driverProfile.FullName,
-                    vehicleData.PlateNumber,
-                    message.Message,
-                    message.DriverState,
-                    mapLink,
-                    driverImageUrl,
-                    roadImageUrl,
-                    message.EventId,
-                    speed,
-                    profilePicUrl,
-                    message.DeviceId
-                );
-                _logger.LogInformation("📧 Alert sent to Company: {Email}", driverProfile?.DriverCompany.RepresentativeEmail);
-            }
-
-            // Send to Family Members
-            if (driverProfile?.DriverFamilyMembers != null)
-            {
-                foreach (var family in driverProfile.DriverFamilyMembers.Where(f => f.NotifyOnCritical))
-                {
-                    if (!string.IsNullOrEmpty(family.Email))
-                    {
-                        await notificationService.SendCriticalAlertAsync(
-                            family.Email,
-                            driverProfile.FullName,
-                            vehicleData.PlateNumber,
-                            message.Message,
-                            message.DriverState,
-                            mapLink,
-                            driverImageUrl,
-                            roadImageUrl,
-                            message.EventId,
-                            speed,
-                            profilePicUrl,
-                            message.DeviceId
-                        );
-
-                        _logger.LogInformation("📧 Alert sent to Family: {Name} ({Email})",family.FullName, family.Email);
-                    }
-                }
-            }
-
             _logger.LogInformation("✅ Critical Event {EventId} processed successfully", message.EventId);
             return true;
         }
@@ -292,6 +238,108 @@ public class CriticalEventSqsConsumer : BackgroundService
         {
             _logger.LogError(ex, "❌ Unexpected error processing message {MessageId}", sqsMessage.MessageId);
             return false; 
+        }
+    }
+
+    
+    private async Task SendSignalRAlertAsync(
+        CriticalDrowsinessEventMessage message,
+        AegisDrive.Api.Contracts.Vehicles.GetVehicleResponse vehicleData ,
+        AegisDrive.Api.Contracts.SafetyEventsDto.CreatedCriticalSafetyEventResponse safetyData,
+        IFileStorageService fileService,
+        string mapLink,
+        double speed)
+    {
+        try
+        {
+            string driverImgUrl = fileService.GetPresignedUrl(safetyData.DriverImageKey ?? "");
+
+            var alertNotification = new CriticalAlertNotification(
+                message.EventId,
+                vehicleData.PlateNumber,
+                message.DriverState,
+                message.AlertLevel,
+                message.Message,
+                mapLink,
+                speed,
+                DateTime.UtcNow,
+                driverImgUrl
+            );
+
+            if (vehicleData.CompanyId.HasValue)
+            {
+                var group = $"company_{vehicleData.CompanyId}".ToLower();
+                await _hubContext.Clients.Group(group).ReceiveCriticalAlert(alertNotification);
+                _logger.LogInformation("📡 SignalR sent to Company: {Group}", group);
+            }
+            else if (!string.IsNullOrEmpty(vehicleData.OwnerUserId))
+            {
+                var group = $"user_{vehicleData.OwnerUserId}".ToLower();
+                await _hubContext.Clients.Group(group).ReceiveCriticalAlert(alertNotification);
+                _logger.LogInformation("📡 SignalR sent to User: {Group}", group);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "⚠️ SignalR Task Failed for Event {EventId}", message.EventId);
+        }
+    }
+
+    
+    private async Task SendEmailNotificationsAsync(
+        CriticalDrowsinessEventMessage message,
+        AegisDrive.Api.Contracts.Vehicles.GetVehicleResponse vehicleData,
+        AegisDrive.Api.Contracts.Drivers.GetDriverProfileResponse? driverProfile,
+        AegisDrive.Api.Contracts.SafetyEventsDto.CreatedCriticalSafetyEventResponse safetyData,
+        IDatabase redis,
+        INotificationService notificationService,
+        IFileStorageService fileService,
+        string mapLink,
+        double speed)
+    {
+        try
+        {
+            // Redis Rate Limit Check
+            string cooldownKey = $"email_cooldown:{vehicleData.CurrentDriverId}";
+            if (!await redis.StringSetAsync(cooldownKey, "sent", TimeSpan.FromSeconds(30), When.NotExists))
+            {
+                _logger.LogInformation("⏳ Email skipped (Cooldown active) for driver {DriverId}", vehicleData.CurrentDriverId);
+                return;
+            }
+
+            // Send to Company
+            if (driverProfile?.DriverCompany != null && !string.IsNullOrEmpty(driverProfile.DriverCompany.RepresentativeEmail))
+            {
+                await notificationService.SendCriticalAlertAsync(
+                    driverProfile.DriverCompany.RepresentativeEmail,
+                    driverProfile.FullName,
+                    vehicleData.PlateNumber,
+                    message.Message,
+                    message.DriverState,
+                    mapLink,
+                    message.EventId,
+                    speed,
+                    message.DeviceId
+                );
+            }
+
+            // Send to Family
+            if (driverProfile?.DriverFamilyMembers != null)
+            {
+                foreach (var family in driverProfile.DriverFamilyMembers.Where(f => f.NotifyOnCritical && !string.IsNullOrEmpty(f.Email)))
+                {
+                    await notificationService.SendCriticalAlertAsync(
+                        family.Email, driverProfile.FullName, vehicleData.PlateNumber,
+                        message.Message, message.DriverState, mapLink,
+                         message.EventId, speed,  message.DeviceId
+                    );
+                }
+            }
+            _logger.LogInformation("📧 Email notifications sent for Event {EventId}", message.EventId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "⚠️ Email Task Failed for Event {EventId}", message.EventId);
         }
     }
 

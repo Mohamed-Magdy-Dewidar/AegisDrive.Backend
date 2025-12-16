@@ -1,4 +1,5 @@
 ﻿using AegisDrive.Api.Contracts;
+using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Shared.MarkerInterface;
 using AegisDrive.Api.Shared.ResultEndpoint;
@@ -9,7 +10,7 @@ using System.Text.Json;
 
 namespace AegisDrive.Api.Features.Fleet;
 
-public static partial class GetVehicle
+public static class GetVehicle
 {
 
     public record Query(int Id) : IRequest<Result<GetVehicleResponse>>;
@@ -46,11 +47,12 @@ public static partial class GetVehicle
                 .Where(v => v.Id == request.Id)
                 .Select(v => new GetVehicleResponse(
                     v.Id,
-                    v.PlateNumber,
+                    v.PlateNumber ?? "N/A",
                     v.Model,
-                    v.Status.ToString(), // Enum to String
+                    v.Status.ToString(), 
                     v.CurrentDriverId,
-                    v.CompanyId
+                    v.CompanyId,
+                    v.OwnerUserId
                 ))
                 .FirstOrDefaultAsync(cancellationToken);
 

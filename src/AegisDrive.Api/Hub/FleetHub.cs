@@ -44,6 +44,7 @@ public class FleetHub : Hub<IFleetClient>
         else
         {
             // Individuals (or Drivers) listen only to their OWN Personal Channel
+            // User 0ded8209-fe72-4c18-ae10-0fdbbaf727c8 joined group user_0ded8209-fe72-4c18-ae10-0fdbbaf727c8
             var groupName = $"User_{userId}".ToLower();
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
             _logger.LogInformation($"User {userId} joined group {groupName}");

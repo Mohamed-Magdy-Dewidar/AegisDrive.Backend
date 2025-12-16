@@ -156,6 +156,7 @@ public static class IngestTelemetry
             else if (!string.IsNullOrEmpty(context.OwnerUserId))
             {
                 // "user_56d5e237-c1bf-417a-a2f2-0a480be93754"
+                // correct one -> "user_0ded8209-fe72-4c18-ae10-0fdbbaf727c8"
                 var groupName = $"User_{context.OwnerUserId}".ToLower();
                 await _hubContext.Clients
                     .Group(groupName)

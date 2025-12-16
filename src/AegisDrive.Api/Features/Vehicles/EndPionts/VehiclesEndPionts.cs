@@ -1,6 +1,5 @@
 ﻿using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Features.Fleet;
-using AegisDrive.Api.Features.Monitoring;
 using Carter;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -76,7 +75,11 @@ public class VehiclesEndPionts : ICarterModule
         .WithSummary("Start a driver shift (Assign driver to vehicle)");
 
 
+
+
+        // =================================================================
         // POST /api/v1/fleet/assignments/end/{vehicleId}
+        // =================================================================        
         group.MapPost("/assignments/end/{vehicleId:int}", async (int vehicleId, ISender sender) =>
         {
             var command = new EndShift.Command(vehicleId);
