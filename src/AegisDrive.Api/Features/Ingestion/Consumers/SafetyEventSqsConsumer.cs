@@ -5,12 +5,11 @@ using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Entities.Enums.Driver;
 using AegisDrive.Api.Features.Drivers;
-using AegisDrive.Api.Features.Fleet;
 using AegisDrive.Api.Features.Monitoring;
 using AegisDrive.Api.Features.SafetyEvents;
+using AegisDrive.Api.Features.Vehicles;
 using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
-using AegisDrive.Api.Shared.Email;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using MediatR;
@@ -28,7 +27,7 @@ public class SafetyEventSqsConsumer : BackgroundService
     private readonly string _queueUrl;
     private readonly IServiceProvider _serviceProvider;
     private readonly IConnectionMultiplexer _redisMux;
-    private readonly IHubContext<FleetHub, IFleetClient> _hubContext; // [NEW] SignalR Context
+    private readonly IHubContext<FleetHub, IFleetClient> _hubContext; 
 
     public SafetyEventSqsConsumer(
         IAmazonSQS sqsClient,
@@ -36,7 +35,7 @@ public class SafetyEventSqsConsumer : BackgroundService
         ILogger<SafetyEventSqsConsumer> logger,
         IConnectionMultiplexer redisMux,
         IServiceProvider serviceProvider,
-        IHubContext<FleetHub, IFleetClient> hubContext) // [NEW] Injected here
+        IHubContext<FleetHub, IFleetClient> hubContext) 
     {
         _sqsClient = sqsClient;
         _queueUrl = sqsSettings.Value.DrowsinessEventsQueueUrl;

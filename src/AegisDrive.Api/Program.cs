@@ -1,4 +1,5 @@
 using AegisDrive.Api.Contracts;
+using AegisDrive.Api.CustomMiddleWares;
 using AegisDrive.Api.DataBase;
 using AegisDrive.Api.Entities.Identity;
 using AegisDrive.Api.Extensions;
@@ -209,6 +210,7 @@ builder.Services.AddCors(options =>
 
 
 
+
 // =================================================================
 // 6. PIPELINE CONFIGURATION                                           
 // =================================================================
@@ -225,6 +227,12 @@ await app.IntializeDataBase();
 //    var emailService = scope.ServiceProvider.GetRequiredService<IAmazonSimpleEmailService>();
 //    await EmailTemplates.InitializeTemplates(emailService);
 // }
+
+
+app.UseMiddleware<CustomExceptionHandlerMiddleware>();
+
+
+
 
 if (app.Environment.IsDevelopment())
 {

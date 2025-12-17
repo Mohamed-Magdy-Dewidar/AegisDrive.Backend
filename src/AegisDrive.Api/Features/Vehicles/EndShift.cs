@@ -1,4 +1,5 @@
 ﻿using AegisDrive.Api.Contracts;
+using AegisDrive.Api.Contracts.Vehicles; // Assuming EndShiftRequest is here
 using AegisDrive.Api.DataBase;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Shared;
@@ -7,14 +8,14 @@ using AegisDrive.Api.Shared.ResultEndpoint;
 using Carter;
 using FluentValidation;
 using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace AegisDrive.Api.Features.Fleet;
+namespace AegisDrive.Api.Features.Vehicles;
 
 public static class EndShift
 {
     public record Command(int VehicleId) : ICommand<Result<EndShiftResponse>>;
-
 
     public class Validator : AbstractValidator<Command>
     {
@@ -25,19 +26,18 @@ public static class EndShift
         }
     }
 
-    public record EndShiftResponse(long AssignmentId, int DriverId, int VehicleId, DateTime StartTime, DateTime EndTime, string Duration)
-    {
-        public string Message { get; init; } = $"Shift ended successfully. Duration: {Duration}";
-    }
+    
 
-   
     internal sealed class Handler : IRequestHandler<Command, Result<EndShiftResponse>>
     {
         private readonly IGenericRepository<Vehicle, int> _vehicleRepository;
         private readonly IGenericRepository<VehicleAssignment, long> _assignmentRepository;
         private readonly IValidator<Command> _validator;
 
-        public Handler(IGenericRepository<Vehicle, int> vehicleRepository,IGenericRepository<VehicleAssignment, long> assignmentRepository,IValidator<Command> validator)
+        public Handler(
+            IGenericRepository<Vehicle, int> vehicleRepository,
+            IGenericRepository<VehicleAssignment, long> assignmentRepository,
+            IValidator<Command> validator)
         {
             _vehicleRepository = vehicleRepository;
             _assignmentRepository = assignmentRepository;
@@ -54,7 +54,6 @@ public static class EndShift
             if (vehicle == null)
                 return Result.Failure<EndShiftResponse>(new Error("Vehicle.NotFound", "Vehicle not found."));
 
-
             // C. Logic: Find the ACTIVE assignment for this vehicle
             var activeAssignment = await _assignmentRepository
                 .GetAll(va => va.VehicleId == request.VehicleId && va.UnassignedAt == null)
@@ -62,23 +61,24 @@ public static class EndShift
 
             if (activeAssignment == null)
             {
-                // If no active shift found, we can't end it.
-                // Optionally, we could just return Success if the goal is "ensure it's stopped", 
-                // but returning Failure helps the frontend know the state was inconsistent.
                 return Result.Failure<EndShiftResponse>(new Error("Shift.NotFound", "No active shift found for this vehicle."));
             }
 
-
             var now = DateTime.UtcNow;
 
+            // D. End the Assignment Record
             activeAssignment.UnassignedAt = now;
             _assignmentRepository.SaveInclude(activeAssignment, nameof(VehicleAssignment.UnassignedAt));
 
-            // E. Clear Vehicle's CurrentDriverId (Fast Lookup)
+            // E. Clear Vehicle's Links (Fast Lookup)
             vehicle.CurrentDriverId = null;
-            _vehicleRepository.SaveInclude(vehicle, nameof(Vehicle.CurrentDriverId));
+            vehicle.OwnerUserId = null;
 
-            
+            // Explicitly save the changes to these columns
+            _vehicleRepository.SaveInclude(vehicle, nameof(Vehicle.CurrentDriverId), nameof(Vehicle.OwnerUserId));
+
+            // G. Final Save
+            await _assignmentRepository.SaveChangesAsync();
 
             // Calculate duration for display
             var duration = now - activeAssignment.AssignedAt;

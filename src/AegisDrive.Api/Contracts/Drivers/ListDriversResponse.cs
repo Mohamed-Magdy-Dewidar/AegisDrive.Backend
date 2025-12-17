@@ -1,5 +1,4 @@
-﻿using AegisDrive.Api.Entities;
-namespace AegisDrive.Api.Contracts.Drivers;
+﻿namespace AegisDrive.Api.Contracts.Drivers;
 
 
 public record ListDriversResponse(string FullName,string PhoneNumber,string? Email,bool IsActive,int SafetyScore,string? CompanyName)

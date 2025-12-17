@@ -1,3 +1,3 @@
-﻿namespace AegisDrive.Api.Features.Fleet;
+﻿namespace AegisDrive.Api.Contracts.Vehicles;
 
 public record StartShiftRequest(int DriverId, int VehicleId);

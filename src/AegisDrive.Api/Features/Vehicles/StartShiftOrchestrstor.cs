@@ -1,41 +1,39 @@
 ﻿using AegisDrive.Api.Contracts;
-using AegisDrive.Api.Contracts.Vehicles; 
+using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Entities;
-using AegisDrive.Api.Entities.Enums; 
+using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Shared.MarkerInterface;
 using AegisDrive.Api.Shared.ResultEndpoint;
-using Carter;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Client;
 
-namespace AegisDrive.Api.Features.Fleet;
+namespace AegisDrive.Api.Features.Vehicles;
 
 public static class StartShift
 {
-    
-    public record Command(int DriverId, int VehicleId) : ICommand<Result<StartShiftResponse>>;
+    public record Command(int DriverId, int VehicleId, string OwnerUserId) : ICommand<Result<StartShiftResponse>>;
 
-   
     public class Validator : AbstractValidator<Command>
     {
         public Validator()
         {
             RuleFor(x => x.DriverId).GreaterThan(0);
             RuleFor(x => x.VehicleId).GreaterThan(0);
+            RuleFor(x => x.OwnerUserId).NotEmpty(); 
         }
     }
 
-    
-   
     internal sealed class Handler : IRequestHandler<Command, Result<StartShiftResponse>>
     {
         private readonly IGenericRepository<Vehicle, int> _vehicleRepository;
         private readonly IGenericRepository<VehicleAssignment, long> _assignmentRepository;
         private readonly IValidator<Command> _validator;
 
-        public Handler( IGenericRepository<Vehicle, int> vehicleRepository, IGenericRepository<VehicleAssignment, long> assignmentRepository, IValidator<Command> validator)
+        public Handler(
+            IGenericRepository<Vehicle, int> vehicleRepository,
+            IGenericRepository<VehicleAssignment, long> assignmentRepository,
+            IValidator<Command> validator)
         {
             _vehicleRepository = vehicleRepository;
             _assignmentRepository = assignmentRepository;
@@ -52,13 +50,13 @@ public static class StartShift
             if (targetVehicle == null)
                 return Result.Failure<StartShiftResponse>(new Error("Vehicle.NotFound", "Vehicle not found."));
 
-            if (targetVehicle.Status != VehicleStatus.Active) // Assuming Enum comparison
+            if (targetVehicle.Status != VehicleStatus.Active)
                 return Result.Failure<StartShiftResponse>(new Error("Vehicle.Unavailable", $"Vehicle is {targetVehicle.Status} and cannot be assigned."));
 
             var now = DateTime.UtcNow;
 
             // C. LOGIC 1: Is this DRIVER already driving ANOTHER vehicle?
-            // If so, we must Clock Out of that old vehicle.
+            // If so, we must Clock Out of that old vehicle AND clear its OwnerUserId.
             var activeDriverShift = await _assignmentRepository.GetAll()
                 .Where(va => va.DriverId == request.DriverId && va.UnassignedAt == null)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -69,13 +67,14 @@ public static class StartShift
                 activeDriverShift.UnassignedAt = now;
                 _assignmentRepository.SaveInclude(activeDriverShift, nameof(VehicleAssignment.UnassignedAt));
 
-                // 2. CRITICAL FIX: Clear the OLD vehicle's CurrentDriverId
-                // We must fetch the OLD vehicle using the assignment's VehicleId, NOT the request.DriverId
+                // 2. Clear the OLD vehicle's links
                 var oldVehicle = await _vehicleRepository.GetByIdAsync(activeDriverShift.VehicleId);
                 if (oldVehicle != null)
                 {
                     oldVehicle.CurrentDriverId = null;
-                    _vehicleRepository.SaveInclude(oldVehicle, nameof(Vehicle.CurrentDriverId));
+                    oldVehicle.OwnerUserId = null; 
+                    
+                    _vehicleRepository.SaveInclude(oldVehicle, nameof(Vehicle.CurrentDriverId), nameof(Vehicle.OwnerUserId));
                 }
             }
 
@@ -104,17 +103,21 @@ public static class StartShift
 
             // F. Update Target Vehicle Fast Lookup
             targetVehicle.CurrentDriverId = request.DriverId;
-            _vehicleRepository.SaveInclude(targetVehicle, nameof(Vehicle.CurrentDriverId));
+            targetVehicle.OwnerUserId = request.OwnerUserId; //Link to logged-in user
 
-            // G. Final Save (Transactional Middleware handles the atomic commit)
+            _vehicleRepository.SaveInclude(targetVehicle, nameof(Vehicle.CurrentDriverId), nameof(Vehicle.OwnerUserId));
+
+            // G. Final Save
             await _assignmentRepository.SaveChangesAsync();
 
-            return Result.Success(new StartShiftResponse(newAssignment.Id,newAssignment.DriverId,newAssignment.VehicleId,newAssignment.AssignedAt,"Shift started successfully."));
-        
-
+            return Result.Success(new StartShiftResponse(
+                newAssignment.Id,
+                newAssignment.DriverId,
+                newAssignment.VehicleId,
+                newAssignment.AssignedAt,
+                "Shift started successfully."
+            ));
         }
     }
-
-
-
+    
 }

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Text.Json;
 
-namespace AegisDrive.Api.Features.Fleet;
+namespace AegisDrive.Api.Features.Vehicles;
 
 public static class GetVehicle
 {

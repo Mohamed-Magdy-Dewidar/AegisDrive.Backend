@@ -13,7 +13,7 @@ public class Device : BaseEntity<string>
     public DeviceType Type { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public DeviceStatus Status { get; set; }
+    public DeviceStatus Status { get; set; } = DeviceStatus.Online;
 
 
     public DateTime? LastHeartbeat { get; set; }

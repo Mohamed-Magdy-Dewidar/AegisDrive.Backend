@@ -9,7 +9,7 @@ using Carter;
 using FluentValidation;
 using MediatR;
 
-namespace AegisDrive.Api.Features.Fleet;
+namespace AegisDrive.Api.Features.Vehicles;
 
 public static class RegisterVehicle
 {

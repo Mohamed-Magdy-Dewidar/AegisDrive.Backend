@@ -9,7 +9,7 @@ using Carter;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace AegisDrive.Api.Features.Fleet;
+namespace AegisDrive.Api.Features.Vehicles;
 
 public static class ListVehicles
 {
