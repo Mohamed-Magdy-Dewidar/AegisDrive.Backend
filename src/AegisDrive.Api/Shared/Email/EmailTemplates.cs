@@ -5,7 +5,7 @@ namespace AegisDrive.Infrastructure.Services.Notification.Templates;
 
 public static class EmailTemplates
 {
-    public const string CriticalAlertTemplateName = "AegisDrive_CriticalAlert_v3"; // Updated Version
+    public const string CriticalAlertTemplateName = "AegisDrive_CriticalAlert_v3"; 
     public const string GeneralNotificationTemplateName = "AegisDrive_General_v1";
     public const string HighAlertTemplateName = "AegisDrive_HighAlert_v1";
 
@@ -54,7 +54,7 @@ public static class EmailTemplates
                         </div>
 
                         <div style="margin-top: 30px; text-align: center;">
-                            <a href="https://dashboard.aegisdrive.com/incidents/{{EventId}}" 
+                            <a href="http://localhost:5173/events/{{EventId}}" 
                                 style="background-color: #d32f2f; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block;">
                                 View Evidence & Full Report
                             </a>
@@ -116,7 +116,7 @@ public static class EmailTemplates
                     </div>
 
                     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px;">
-                        <a href="https://dashboard.aegisdrive.com/incidents/{{EventId}}" 
+                        <a href="http://localhost:5173/events/{{EventId}}" 
                            style="background-color: #f57c00; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
                             View Incident Details & Evidence
                         </a>
@@ -142,7 +142,7 @@ public static class EmailTemplates
             Time: {{Timestamp}}
 
             View full details and evidence here:
-            https://dashboard.aegisdrive.com/incidents/{{EventId}}
+            http://localhost:5173/events/{{EventId}}
             """
             }
         };

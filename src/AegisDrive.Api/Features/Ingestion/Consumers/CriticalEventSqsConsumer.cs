@@ -46,7 +46,7 @@ public class CriticalEventSqsConsumer : BackgroundService
         _serviceProvider = serviceProvider;
         _hubContext = hubContext; 
     }
-
+                  
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -207,7 +207,7 @@ public class CriticalEventSqsConsumer : BackgroundService
                 vehicleData.CompanyId
             );
 
-            
+
             var SafetyEventSaveResult = await sender.Send(createCommand, token);
             if (SafetyEventSaveResult.IsFailure)
             {
@@ -216,7 +216,7 @@ public class CriticalEventSqsConsumer : BackgroundService
             }
             _logger.LogInformation("💾 Safety event {EventId} saved successfully", message.EventId);
             var safetyData = SafetyEventSaveResult.Value;
-
+            
             var signalRTask = Task.Run(() => SendSignalRAlertAsync(
                 message, vehicleData, safetyData, _fileStorageService, mapLink, speed));
 

@@ -1,4 +1,5 @@
 ﻿using AegisDrive.Api.Contracts.Vehicles;
+using AegisDrive.Api.Shared.Auth;
 using Carter;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -23,14 +24,57 @@ public class VehiclesEndPionts : ICarterModule
         // VEHICLES
         // =================================================================
 
+        // GET /api/v1/fleet/vehicles/id
+        group.MapGet("/vehicles/{id}", async (int id, ISender sender) =>
+        {            
+            var query = new GetVehicle.Query(id);
+            var result = await sender.Send(query);
+            if (result.IsSuccess)
+            {
+                return Results.Ok(result.Value); // Return the vehicle details if successful
+            }
+
+            return Results.NotFound(result.Error.Message); // Return error message if not found
+        })
+            .WithSummary("Get vehicle details by ID")
+            .WithDescription("Retrieves the details of a vehicle based on its ID, using caching for better performance.");
+
+
         // GET /api/v1/fleet/vehicles
-        group.MapGet("/vehicles", async ([AsParameters] ListVehicles.Query query, ISender sender) =>
+        group.MapGet("/vehicles", async ([AsParameters] ListVehicles.Query query, ISender sender , ClaimsPrincipal user) =>
         {
+            var role = user.FindFirst(ClaimTypes.Role)?.Value;
+            var companyIdClaim = user.FindFirst(AuthConstants.Claims.CompanyId)?.Value;
+
+            // Get the real company_id from the token 
+            if (int.TryParse(companyIdClaim, out int company_id))
+            {
+                query = query with { CompanyId = company_id };
+            }
+            else
+            {
+                query = query with { CompanyId = null };
+            }
+
+            if (role == AuthConstants.AccountTypes.Individual)
+            {
+                var driverIdClaim = user.FindFirst(AuthConstants.Claims.DriverId)?.Value;
+                if (int.TryParse(driverIdClaim, out int driverId))
+                {
+                    query = query with { DriverId = driverId };
+                }
+                else
+                {
+                    query = query with { DriverId = null }; 
+                }
+            }
+
             var result = await sender.Send(query);
             return Results.Ok(result.Value);
         })
         .WithSummary("List vehicles with filtering and pagination")
-        .WithDescription("Filters: ?companyId=1&status=Active&page=1&pageSize=20");
+        .WithDescription("Filters: ?companyId=1&status=Active&page=1&pageSize=20")
+        .RequireAuthorization();
 
         // POST /api/v1/fleet/vehicles
         group.MapPost("/vehicles", async ([FromBody] RegisterVehicleRequest request, ISender sender) =>

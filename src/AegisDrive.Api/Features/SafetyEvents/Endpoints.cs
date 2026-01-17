@@ -62,17 +62,6 @@ public class SafetyEventEndpoints : ICarterModule
          .WithSummary("Get a filterable list of safety events (Evidence Feed)");
 
 
-        group.MapGet("/safety-events-without-auth", async ([AsParameters] GetSafetyEvents.Query query, ISender sender, ClaimsPrincipal user) =>
-        {
-            var result = await sender.Send(query);
-            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
-        })
-        .WithTags("Analytics")
-        .WithSummary("Get a filterable list of safety events (Evidence Feed) without auth");
-
-
-
-
 
 
         // 2. ANALYTICS (Get Details)

@@ -50,6 +50,7 @@ public static class IngestTelemetry
             _validator = validator;
         }
 
+        // 30.045399 , 31.235701
         public async Task<Result> Handle(Command request, CancellationToken token)
         {
 
@@ -57,7 +58,7 @@ public static class IngestTelemetry
 
             if (!validationResult.IsValid)
                 return Result.Failure(new Error("IngestTelemetry.Validation", validationResult?.Errors?.ToString()));
-
+             
             var contextResult = await _sender.Send(new GetDeviceById.Query(request.DeviceId), token);
 
             if (contextResult.IsFailure)

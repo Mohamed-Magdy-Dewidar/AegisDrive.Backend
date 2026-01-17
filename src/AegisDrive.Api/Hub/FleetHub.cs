@@ -9,7 +9,6 @@ namespace AegisDrive.Api.Hubs;
 
 
 [Authorize] 
-// <--- Requires valid JWT to connect
 public class FleetHub : Hub<IFleetClient>
 {
     private readonly ILogger<FleetHub> _logger;

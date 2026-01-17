@@ -12,7 +12,7 @@ namespace AegisDrive.Api.Features.Drivers;
 
 public static class ListDrivers
 {
-    public record Query(int? CompanyId, bool? IsActive, int Page = 1, int PageSize = 20) : IRequest<Result<PagedResult<ListDriversResponse>>>;
+    public record Query(int? CompanyId, int? DriverId , bool? IsActive, int Page = 1, int PageSize = 20) : IRequest<Result<PagedResult<ListDriversResponse>>>;
 
     internal sealed class Handler : IRequestHandler<Query, Result<PagedResult<ListDriversResponse>>>
     {
@@ -37,6 +37,10 @@ public static class ListDrivers
 
             if (request.IsActive.HasValue)
                 query = query.Where(d => d.IsActive == request.IsActive.Value);
+
+
+            if(request.DriverId.HasValue)
+                query = query.Where(d => d.Id == request.DriverId);
 
             var dtoQuery = query
                 .OrderByDescending(d => d.CreatedOnUtc)

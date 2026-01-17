@@ -13,7 +13,7 @@ namespace AegisDrive.Api.Features.Vehicles;
 public static class GetVehicle
 {
 
-    public record Query(int Id) : IRequest<Result<GetVehicleResponse>>;
+    public record Query(int? Id ) : IRequest<Result<GetVehicleResponse>>;
 
     internal sealed class Handler : IRequestHandler<Query, Result<GetVehicleResponse>>
     {

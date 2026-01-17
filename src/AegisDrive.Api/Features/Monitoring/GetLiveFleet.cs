@@ -16,6 +16,7 @@ public static class GetLiveFleet
     // 1. Query
     public record Query(
         int? CompanyId,
+        int? DriverId,
         int Page = 1,
         int PageSize = 50
     ) : IRequest<Result<PagedResult<FleetVehicleLiveStateResponse>>>;
@@ -43,11 +44,15 @@ public static class GetLiveFleet
             {
                 query = query.Where(v => v.CompanyId == request.CompanyId.Value);
             }
+            else
+            {
+                query = query.Where(v => request.DriverId.HasValue && v.CurrentDriverId == request.DriverId.Value);
+            }
 
-            var pagedIds = await query
-                .OrderByDescending(v => v.CreatedOnUtc)
-                .Select(v => new { v.Id })
-                .ToPagedResultAsync(request.Page, request.PageSize, cancellationToken);
+                var pagedIds = await query
+                    .OrderByDescending(v => v.CreatedOnUtc)
+                    .Select(v => new { v.Id })
+                    .ToPagedResultAsync(request.Page, request.PageSize, cancellationToken);
 
             if (!pagedIds.Items.Any())
             {

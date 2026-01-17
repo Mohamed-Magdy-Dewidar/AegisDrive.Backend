@@ -60,25 +60,56 @@ public class SesNotificationService : INotificationService
     //}
 
 
+    //private async Task SendTemplatedEmail(string to, string templateName, object data)
+    //{
+    //    try
+    //    {
+    //        var sendRequest = new SendTemplatedEmailRequest
+    //        {
+    //            Source = _SesEmailSettings.SenderEmail,
+    //            Destination = new Destination { ToAddresses = [to] },
+    //            Template = templateName,
+    //            TemplateData = JsonSerializer.Serialize(data) // SES requires JSON string
+    //        };
+
+    //        var response = await _sesClient.SendTemplatedEmailAsync(sendRequest);
+    //        _logger.LogInformation("Email sent to {Recipient}. MsgId: {MsgId}", to, response.MessageId);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "Failed to send email to {Recipient}", to);
+    //        // Don't throw, we don't want to crash the message consumer for an email failure
+    //    }
+    //}
+
     private async Task SendTemplatedEmail(string to, string templateName, object data)
     {
         try
         {
+            var jsonPayload = JsonSerializer.Serialize(data);
+            // Debugging: Print what we are sending
+            Console.WriteLine($"[Email Debug] Sending Template: {templateName}");
+            Console.WriteLine($"[Email Debug] Payload: {jsonPayload}");
+
             var sendRequest = new SendTemplatedEmailRequest
             {
                 Source = _SesEmailSettings.SenderEmail,
-                Destination = new Destination { ToAddresses = [to] },
+                Destination = new Destination { ToAddresses = new List<string> { to } },
                 Template = templateName,
-                TemplateData = JsonSerializer.Serialize(data) // SES requires JSON string
+                TemplateData = jsonPayload
             };
 
             var response = await _sesClient.SendTemplatedEmailAsync(sendRequest);
             _logger.LogInformation("Email sent to {Recipient}. MsgId: {MsgId}", to, response.MessageId);
+            Console.WriteLine($"[Email Success] MsgId: {response.MessageId}");
         }
         catch (Exception ex)
         {
+            // 🚨 THIS IS THE MISSING PIECE
+            Console.WriteLine($"[Email ERROR] Failed to send {templateName}: {ex.Message}");
+            // If it's a specific SES error, it will tell you "TemplateDoesNotExist" or "Rendering Failure"
             _logger.LogError(ex, "Failed to send email to {Recipient}", to);
-            // Don't throw, we don't want to crash the message consumer for an email failure
+            throw; // Temporarily re-throw to see the crash in Swagger/Postman
         }
     }
 

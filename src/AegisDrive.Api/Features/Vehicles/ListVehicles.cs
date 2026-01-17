@@ -14,7 +14,7 @@ namespace AegisDrive.Api.Features.Vehicles;
 public static class ListVehicles
 {
 
-    public record Query(int? CompanyId, VehicleStatus? Status,int Page = 1,int PageSize = 20) : IRequest<Result<PagedResult<ListVehiclesResponse>>>;
+    public record Query(int? CompanyId, int? DriverId , VehicleStatus? Status,int Page = 1,int PageSize = 20) : IRequest<Result<PagedResult<ListVehiclesResponse>>>;
 
 
 
@@ -45,6 +45,9 @@ public static class ListVehicles
             {
                 query = query.Where(v => v.Status == request.Status);
             }
+
+            if (request.DriverId.HasValue)
+                query = query.Where(v => v.CurrentDriverId == request.DriverId);
 
             var dtoQuery = query
                 .OrderByDescending(v => v.CreatedOnUtc)
