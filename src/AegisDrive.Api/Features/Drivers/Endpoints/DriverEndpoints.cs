@@ -39,7 +39,7 @@ public class DriverEndpoints : ICarterModule
         .DisableAntiforgery();
 
         // PUT /api/v1/fleet/drivers
-        fleetGroup.MapPut("/", async ([FromForm] UpdateDriverRequest request, ISender sender) =>
+        fleetGroup.MapPut("/", async ([FromBody] UpdateDriverRequest request, ISender sender) =>
         {
             int? companyId = string.IsNullOrWhiteSpace(request.CompanyId) ? null : int.Parse(request.CompanyId);
 

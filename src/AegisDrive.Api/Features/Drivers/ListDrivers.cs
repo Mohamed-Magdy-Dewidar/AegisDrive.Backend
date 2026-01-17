@@ -45,11 +45,13 @@ public static class ListDrivers
             var dtoQuery = query
                 .OrderByDescending(d => d.CreatedOnUtc)
                 .Select(d => new ListDriversResponse(
+                    d.Id,
                     d.FullName,
                     d.PhoneNumber,
                     d.Email,
                     d.IsActive,
                     d.SafetyScore,
+                    d.CompanyId,
                     d.Company != null ? d.Company.Name : null
                 )
                 {

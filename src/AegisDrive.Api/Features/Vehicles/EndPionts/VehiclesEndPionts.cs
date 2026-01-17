@@ -76,6 +76,67 @@ public class VehiclesEndPionts : ICarterModule
         .WithDescription("Filters: ?companyId=1&status=Active&page=1&pageSize=20")
         .RequireAuthorization();
 
+
+
+        // GET /api/v1/fleet/vehicles/unassigned
+        group.MapGet("/vehicles/unassigned", async (
+            [AsParameters] GetAllUnAssignedVehciles.Query query,
+            ISender sender,
+            ClaimsPrincipal user) =>
+        {
+            var companyIdClaim = user.FindFirst(AuthConstants.Claims.CompanyId)?.Value;
+            if (int.TryParse(companyIdClaim, out int companyId))
+            {
+                query = query with { CompanyId = companyId };
+            }
+
+            var role = user.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == AuthConstants.AccountTypes.Individual)
+            {
+                var driverIdClaim = user.FindFirst(AuthConstants.Claims.DriverId)?.Value;
+                query = query with
+                {
+                    DriverId = int.TryParse(driverIdClaim, out int driverId) ? driverId : null,
+                    CompanyId = null
+                };
+            }
+
+            var result = await sender.Send(query);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+        })
+        .WithSummary("Get available vehicles (Unassigned)")
+        .RequireAuthorization();
+
+        // GET /api/v1/fleet/vehicles/assigned
+        group.MapGet("/vehicles/assigned", async (
+            [AsParameters] GetAssignedVehicles.Query query,
+            ISender sender,
+            ClaimsPrincipal user) =>
+        {
+            var companyIdClaim = user.FindFirst(AuthConstants.Claims.CompanyId)?.Value;
+            if (int.TryParse(companyIdClaim, out int companyId))
+            {
+                query = query with { CompanyId = companyId };
+            }
+
+         
+            var role = user.FindFirst(ClaimTypes.Role)?.Value;
+            if (role == AuthConstants.AccountTypes.Individual)
+            {
+                var driverIdClaim = user.FindFirst(AuthConstants.Claims.DriverId)?.Value;
+                query = query with
+                {
+                    DriverId = int.TryParse(driverIdClaim, out int driverId) ? driverId : null,
+                    CompanyId = null
+                };
+            }
+
+            var result = await sender.Send(query);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Error);
+        })
+        .WithSummary("Get currently active vehicles (Assigned)")
+        .RequireAuthorization();
+
         // POST /api/v1/fleet/vehicles
         group.MapPost("/vehicles", async ([FromBody] RegisterVehicleRequest request, ISender sender) =>
         {
@@ -165,7 +226,7 @@ public class VehiclesEndPionts : ICarterModule
         // =================================================================
         // POST /api/v1/fleet/assignments/end/{vehicleId}
         // =================================================================              
-        group.MapPost("/assignments/end{vehicleId:int}", async (int vehicleId, ISender sender) =>
+        group.MapPost("/assignments/end/{vehicleId:int}", async (int vehicleId, ISender sender) =>
         {
             var command = new EndShift.Command(vehicleId);
             var result = await sender.Send(command);
