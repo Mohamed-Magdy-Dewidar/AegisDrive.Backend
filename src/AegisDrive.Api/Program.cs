@@ -60,6 +60,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer
 
 
 
+// Register HttpClient infrastructure
+builder.Services.AddHttpClient();
+
+
 // AWS Services
 builder.Services.AddAWSService<IAmazonSQS>();
 builder.Services.AddAWSService<IAmazonSimpleEmailService>();

@@ -17,7 +17,7 @@ public class TelemetryEvent : BaseEntity<Guid>
     public TelemetryEventType EventType { get; set; } = TelemetryEventType.GpsUpdate;
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-
+        
     public string? DeviceId { get; set; }
     public int? VehicleId { get; set; }
 

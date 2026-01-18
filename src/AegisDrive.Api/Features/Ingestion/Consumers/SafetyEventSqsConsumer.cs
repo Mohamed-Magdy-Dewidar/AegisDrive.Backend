@@ -142,8 +142,10 @@ public class SafetyEventSqsConsumer : BackgroundService
             _logger.LogInformation("💾 Saved {Level} Event {Id}", alertLevel, message.EventId);
             var safetyData = saveResult.Value;
 
-            // 5. Update Score
-            await sender.Send(new DeductDriverSafteyScore.Command(driverId, alertLevel), token);
+
+
+            // 5. Update Score will be handled at the end of the trip
+            //await sender.Send(new DeductDriverSafteyScore.Command(driverId, alertLevel), token);
 
 
 
