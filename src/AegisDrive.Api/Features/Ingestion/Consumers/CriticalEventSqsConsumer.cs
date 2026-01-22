@@ -1,12 +1,14 @@
 ﻿using AegisDrive.Api.Contracts;
 using AegisDrive.Api.Contracts.Events;
 using AegisDrive.Api.Contracts.RealTime;
+using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Entities.Enums.Driver;
 using AegisDrive.Api.Features.Drivers;
 using AegisDrive.Api.Features.Monitoring;
 using AegisDrive.Api.Features.SafetyEvents;
+using AegisDrive.Api.Features.Trips;
 using AegisDrive.Api.Features.Vehicles;
 using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
@@ -172,19 +174,31 @@ public class CriticalEventSqsConsumer : BackgroundService
 
             // 4. Get Live Location
             double speed = 0;
+            double latitude = 0;
+            double longitude = 0;
             string mapLink = "Location Unavailable";
 
             var vehicleLiveState = await sender.Send(new GetVehicleLiveState.Query(message.VehicleId), token);
             if (vehicleLiveState.IsSuccess && vehicleLiveState.Value?.LiveLocation != null)
             {
-                var loc = vehicleLiveState.Value.LiveLocation;
+                LiveLocationResponse loc = vehicleLiveState.Value.LiveLocation;
                 speed = loc.SpeedKmh;
-                mapLink = GpsLinkUtility.GenerateMapsLink(loc.Latitude, loc.Longitude);
+                latitude = loc.Latitude;
+                longitude = loc.Longitude;
+                mapLink = GpsLinkUtility.GenerateMapsLink(latitude, longitude);
             }
+
+
+
+
+            var TripIdResult = await sender.Send(new GetActiveTripIdByVehicleId.Query(message.VehicleId), token);
+            Guid? tripId = TripIdResult.Value?.Id ?? null;
 
             // 5. Save Event (Parse Enums)
             Enum.TryParse<DriverState>(message.DriverState, true, out var driverState);
             Enum.TryParse<AlertLevel>(message.AlertLevel, true, out var alertLevel);
+
+
 
             var createCommand = new CreateCriticalSafetyEvent.Command(
                 message.EventId,
@@ -201,10 +215,14 @@ public class CriticalEventSqsConsumer : BackgroundService
                 message.RoadStatus?.PedestrianCount ?? 0,
                 message.RoadStatus?.ClosestObjectDistance,
                 eventTimestamp,
+                latitude,
+                longitude,
+                speed,
                 message.DeviceId,
                 message.VehicleId,
                 vehicleData.CurrentDriverId,
-                vehicleData.CompanyId
+                vehicleData.CompanyId,
+                tripId
             );
 
 

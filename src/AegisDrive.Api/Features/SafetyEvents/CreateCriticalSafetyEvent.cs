@@ -28,10 +28,14 @@ public  static class CreateCriticalSafetyEvent
         int RoadPedestrianCount,
         double? RoadClosestDistance,
         DateTime Timestamp,
+        double Latitude,
+        double Longitude,
+        double Speed,
         string? DeviceId,
         int? VehicleId,
         int? DriverId,
-        int? CompanyId) : ICommand<Result<CreatedCriticalSafetyEventResponse>>;
+        int? CompanyId,
+        Guid? TripId ) : ICommand<Result<CreatedCriticalSafetyEventResponse>>;
 
 
 
@@ -99,6 +103,7 @@ public  static class CreateCriticalSafetyEvent
                 DeviceId = request.DeviceId,
                 VehicleId = request.VehicleId,
                 DriverId = request.DriverId,
+                TripId = request.TripId,
 
                 // Enums
                 DriverState = request.DriverState,
@@ -112,8 +117,14 @@ public  static class CreateCriticalSafetyEvent
                 // Evidence
                 S3DriverImagePath = request.S3DriverImagePath,
                 S3RoadImagePath = request.S3RoadImagePath,
-                 
-                
+
+                // Location
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+
+                // Speed
+                Speed = request.Speed,
+
 
                 // Road Context
                 RoadHasHazard = request.RoadHasHazard,
@@ -131,7 +142,7 @@ public  static class CreateCriticalSafetyEvent
             if (!string.IsNullOrEmpty(request.S3DriverImagePath))
             {
                 // Define new key: fleets/.../events/.../driver_image.jpg
-                string newKey = $"{baseFolder}/driver_{Guid.NewGuid()}.jpg";
+                string newKey = $"{baseFolder}/driver_{DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")}.jpg";
                 await _fileStorageService.MoveFileAsync(request.S3DriverImagePath, newKey, cancellationToken);
                 safetyEvent.S3DriverImagePath = newKey;
             }
@@ -139,7 +150,7 @@ public  static class CreateCriticalSafetyEvent
             // 2. Move Road Image
             if (!string.IsNullOrEmpty(request.S3RoadImagePath))
             {
-                string newKey = $"{baseFolder}/road_{Guid.NewGuid()}.jpg";
+                string newKey = $"{baseFolder}/road_{DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")}.jpg";
                 await _fileStorageService.MoveFileAsync(request.S3RoadImagePath, newKey, cancellationToken);
                 safetyEvent.S3RoadImagePath = newKey;
             }

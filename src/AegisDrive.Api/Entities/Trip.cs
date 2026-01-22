@@ -14,8 +14,8 @@ public class Trip : BaseEntity<Guid>
 
     public decimal EndLat { get; set; } = 0.0M;
     public decimal EndLng { get; set; } = 0.0M;
-    
-    public DateTime StartTime { get; set; }
+
+    public DateTime StartTime { get; set; } = DateTime.UtcNow;
 
     // Destination Data (Provided by Frontend)
     public string DestinationText { get; set; } = string.Empty;
@@ -28,6 +28,6 @@ public class Trip : BaseEntity<Guid>
     public string? RouteGeometryJson { get; set; } // The blue line coordinates
 
     // Final Summary
-    public DateTime? EndTime { get; set; }
+    public DateTime? EndTime { get; set; } = null;
     public double TripSafetyScore { get; set; } = 100;
 }

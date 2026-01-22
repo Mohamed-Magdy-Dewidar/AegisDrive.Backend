@@ -32,8 +32,10 @@ public static class GetSafetyEventDetails
         int? DriverId,
         string? DriverFullName, 
         AlertLevel AlertLevel,
-        DriverState DriverState
-    )
+        DriverState DriverState,
+        double Latitude,
+        double Longitude, 
+        double Speed)    
     {
         public string? S3DriverImagePath { get; set; } = string.Empty;
         public string? S3RoadImagePath { get; set; } = string.Empty;
@@ -89,7 +91,10 @@ public static class GetSafetyEventDetails
                         e.DriverId,
                         e.Driver != null ? e.Driver.FullName : null,      
                         e.AlertLevel,
-                        e.DriverState
+                        e.DriverState,
+                        e.Latitude,
+                        e.Longitude,                        
+                        e.Speed
                     )
                     {
                         S3DriverImagePath = e.S3DriverImagePath,

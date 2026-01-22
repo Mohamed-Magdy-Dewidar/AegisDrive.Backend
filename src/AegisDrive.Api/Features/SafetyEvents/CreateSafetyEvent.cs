@@ -31,10 +31,14 @@ public static class CreateSafetyEvent
         int RoadPedestrianCount,
         double? RoadClosestDistance,
         DateTime Timestamp,
+        double Latitude,
+        double Longitude,
+        double Speed,
         string? DeviceId,
         int? VehicleId,
         int? DriverId,
-        int? CompanyId
+        int? CompanyId,
+        Guid? TripId
     ) : ICommand<Result<CreatedSafetyEventResponse>>;
 
     public class Validator : AbstractValidator<Command>
@@ -87,9 +91,12 @@ public static class CreateSafetyEvent
                 Timestamp = request.Timestamp,
                 Message = request.Message,
 
+
+                // FKs
                 DeviceId = request.DeviceId,
                 VehicleId = request.VehicleId,
                 DriverId = request.DriverId,
+                TripId = request.TripId,
 
                 DriverState = request.DriverState,
                 AlertLevel = request.AlertLevel,
@@ -101,6 +108,14 @@ public static class CreateSafetyEvent
                 S3DriverImagePath = request.S3DriverImagePath,
                 S3RoadImagePath = request.S3RoadImagePath,
 
+                // location
+                Longitude = request.Longitude,
+                Latitude = request.Latitude,
+
+                // speed 
+                Speed = request.Speed,
+
+                // road context
                 RoadHasHazard = request.RoadHasHazard,
                 RoadVehicleCount = request.RoadVehicleCount,
                 RoadPedestrianCount = request.RoadPedestrianCount,
@@ -118,7 +133,7 @@ public static class CreateSafetyEvent
             {
                 try
                 {
-                    string newKey = $"{baseFolder}/driver_{Guid.NewGuid()}.jpg";
+                    string newKey = $"{baseFolder}/driver_{DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")}.jpg";
                     await _fileStorageService.MoveFileAsync(request.S3DriverImagePath, newKey, cancellationToken);
                     safetyEvent.S3DriverImagePath = newKey; // Update to new path
                 }
@@ -135,7 +150,7 @@ public static class CreateSafetyEvent
             {
                 try
                 {
-                    string newKey = $"{baseFolder}/road_{Guid.NewGuid()}.jpg";
+                    string newKey = $"{baseFolder}/road_{DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")}.jpg";
                     await _fileStorageService.MoveFileAsync(request.S3RoadImagePath, newKey, cancellationToken);
                     safetyEvent.S3RoadImagePath = newKey;
                 }

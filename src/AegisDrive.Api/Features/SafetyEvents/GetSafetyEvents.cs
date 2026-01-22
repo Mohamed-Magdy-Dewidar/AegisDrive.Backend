@@ -75,9 +75,7 @@ public static class GetSafetyEvents
                 e.Id,
                 e.Message ?? "N/A",
                 e.DriverState,
-                e.AlertLevel,
-                _fileService.GetPresignedUrl(e.S3DriverImagePath), 
-                _fileService.GetPresignedUrl(e.S3RoadImagePath),   
+                e.AlertLevel, 
                 e.Timestamp,
                 e.VehiclePlate ?? "N/A",
                 e.DriverName

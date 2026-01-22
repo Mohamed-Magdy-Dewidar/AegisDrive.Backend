@@ -1,6 +1,7 @@
 ﻿namespace AegisDrive.Api.DataBase.Configurations;
 
 using AegisDrive.Api.Entities;
+using AegisDrive.Api.Entities.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,8 +32,12 @@ public class TripConfiguration : IEntityTypeConfiguration<Trip>
 
         // ⚙️ Enum Conversion (Stores the name of the status instead of an int for readability)
         builder.Property(t => t.Status)
-            .HasConversion<string>()
-            .HasMaxLength(20);
+            .HasConversion(
+                convertToProviderExpression: (status) => status.ToString(),
+                convertFromProviderExpression: (_status) => (TripStatus)Enum.Parse(typeof(TripStatus), _status)
+            )
+            .HasMaxLength(50);
+
 
         // 🔗 Relationships
 

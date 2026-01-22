@@ -10,7 +10,7 @@ namespace AegisDrive.Api.Features.Trips;
 
 public static class GetTripEventMetrics
 {
-    public record Query(int VehicleId, DateTime StartTime, DateTime EndTime) : IRequest<Result<MetricsResponse>>;
+    public record Query(int VehicleId , Guid tripId ) : IRequest<Result<MetricsResponse>>;
 
     public record MetricsResponse(
         int CriticalCount,
@@ -25,9 +25,7 @@ public static class GetTripEventMetrics
         public async Task<Result<MetricsResponse>> Handle(Query request, CancellationToken cancellationToken)
         {
             var events = await safetyRepository.GetAll()
-                .Where(e => e.VehicleId == request.VehicleId &&
-                            e.Timestamp >= request.StartTime &&
-                            e.Timestamp <= request.EndTime)
+                .Where(e => e.VehicleId == request.VehicleId && e.TripId == request.tripId)
                 .Select(e => new { e.AlertLevel, e.DriverState })
                 .ToListAsync(cancellationToken);
 

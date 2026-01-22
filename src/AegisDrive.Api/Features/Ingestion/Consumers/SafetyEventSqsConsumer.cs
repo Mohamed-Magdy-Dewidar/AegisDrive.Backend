@@ -1,12 +1,14 @@
 ﻿using AegisDrive.Api.Contracts;
 using AegisDrive.Api.Contracts.Events;
 using AegisDrive.Api.Contracts.RealTime;
+using AegisDrive.Api.Contracts.Vehicles;
 using AegisDrive.Api.Entities;
 using AegisDrive.Api.Entities.Enums;
 using AegisDrive.Api.Entities.Enums.Driver;
 using AegisDrive.Api.Features.Drivers;
 using AegisDrive.Api.Features.Monitoring;
 using AegisDrive.Api.Features.SafetyEvents;
+using AegisDrive.Api.Features.Trips;
 using AegisDrive.Api.Features.Vehicles;
 using AegisDrive.Api.Hubs;
 using AegisDrive.Api.Shared;
@@ -113,10 +115,21 @@ public class SafetyEventSqsConsumer : BackgroundService
 
             // 3. Live Context
             var liveState = await sender.Send(new GetVehicleLiveState.Query(message.VehicleId), token);
+            
             double speed = liveState.Value?.LiveLocation?.SpeedKmh ?? 0;
+            double latitude = liveState.Value?.LiveLocation?.Latitude ?? 0;
+            double Longitude = liveState.Value?.LiveLocation?.Longitude ?? 0;
+            
             string mapLink = liveState.Value?.LiveLocation != null
-                ? GpsLinkUtility.GenerateMapsLink(liveState.Value.LiveLocation.Latitude, liveState.Value.LiveLocation.Longitude)
+                ? GpsLinkUtility.GenerateMapsLink(latitude, Longitude)
                 : "Location Unavailable";
+
+
+            var TripIdResult = await sender.Send(new GetActiveTripIdByVehicleId.Query(message.VehicleId), token);
+            Guid? tripId = TripIdResult.Value?.Id ?? null;
+           
+
+
 
             // 4. Save to DB
             Enum.TryParse<AlertLevel>(message.AlertLevel, true, out var alertLevel);
@@ -132,8 +145,9 @@ public class SafetyEventSqsConsumer : BackgroundService
                 message.RoadStatus?.VehicleCount ?? 0,
                 message.RoadStatus?.PedestrianCount ?? 0,
                 message.RoadStatus?.ClosestObjectDistance,
-                eventTimestamp, message.DeviceId, message.VehicleId,
-                driverId, vehicleData.CompanyId
+                eventTimestamp,latitude , Longitude , speed,
+                message.DeviceId, message.VehicleId,
+                driverId, vehicleData.CompanyId , tripId
             );
 
             var saveResult = await sender.Send(createCommand, token);
@@ -141,12 +155,6 @@ public class SafetyEventSqsConsumer : BackgroundService
 
             _logger.LogInformation("💾 Saved {Level} Event {Id}", alertLevel, message.EventId);
             var safetyData = saveResult.Value;
-
-
-
-            // 5. Update Score will be handled at the end of the trip
-            //await sender.Send(new DeductDriverSafteyScore.Command(driverId, alertLevel), token);
-
 
 
             // =========================================================

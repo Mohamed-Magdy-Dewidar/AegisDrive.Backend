@@ -7,7 +7,6 @@ using AegisDrive.Api.Shared.MarkerInterface;
 using AegisDrive.Api.Shared.ResultEndpoint;
 using MediatR;
 using StackExchange.Redis;
-using static AegisDrive.Api.Features.Trips.StartTrip;
 
 namespace AegisDrive.Api.Features.Trips;
 
@@ -60,9 +59,8 @@ public static class EndTrip
                 trip.EndLng = (decimal)gpsData.Longitude;    
             }
 
+            var metricsResult = await _sender.Send(new GetTripEventMetrics.Query(trip.VehicleId , trip.Id), cancellationToken);
 
-
-            var metricsResult = await _sender.Send(new GetTripEventMetrics.Query(trip.VehicleId, trip.StartTime, endTime), cancellationToken);
 
             if (!metricsResult.IsSuccess) 
                 return Result<TripSummaryResponse>.Failure<TripSummaryResponse>(metricsResult.Error);

@@ -43,6 +43,9 @@ public class SafetyEventConfiguration : IEntityTypeConfiguration<SafetyEvent>
         builder.HasIndex(e => e.Timestamp);
         builder.HasIndex(e => e.AlertLevel);
         builder.HasIndex(e => e.DriverId);
+        builder.HasIndex(e => e.TripId);
+        builder.HasIndex(e => new { e.VehicleId, e.TripId });
+
 
         // Relationships
         builder.HasOne(e => e.Driver)

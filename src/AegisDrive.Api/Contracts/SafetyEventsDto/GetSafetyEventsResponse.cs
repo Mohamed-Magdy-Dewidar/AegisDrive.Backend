@@ -8,8 +8,6 @@ public record GetSafetyEventsResponse(
        string Message,
        DriverState DriverState,
        AlertLevel AlertLevel,
-       string? DriverImageUrl,
-       string? RoadImageUrl,
        DateTime Timestamp,
        string VehiclePlate,
        string DriverName

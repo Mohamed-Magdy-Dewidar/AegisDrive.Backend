@@ -12,17 +12,6 @@ public class SafetyEventEndpoints : ICarterModule
     {
         var group = app.MapGroup("api/v1");
 
-        // 1. INGESTION (HTTP Fallback)
-        group.MapPost("/ingest/safety-event", async ([FromBody] CreateSafetyEvent.Command command, ISender sender) =>
-        {
-            var result = await sender.Send(command);
-            return result.IsSuccess ? Results.Accepted(value: result.Value) : Results.BadRequest(result.Error);
-        })
-        .WithTags("Ingestion")
-        .WithSummary("Ingest a safety event (HTTP fallback for SQS)");
-
-
-
 
         group.MapGet("/safety-events", async ([AsParameters] GetSafetyEvents.Query query, ISender sender, ClaimsPrincipal user) =>
         {

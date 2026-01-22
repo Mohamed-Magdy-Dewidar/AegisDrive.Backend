@@ -67,20 +67,6 @@ public class DrowsinessEventMessage
 
     public DateTime GetParsedTimestamp()
     {
-        // Fix: Escape the 'h', 'm', 's' characters with single quotes
-        // Format: "Dec06_2025_04h03m11s"
-        string format = "MMMdd_yyyy_HH'h'mm'm'ss's'";
-
-        if (DateTime.TryParseExact(Timestamp,
-            format,
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.None,
-            out DateTime result))
-        {
-            return result;
-        }
-
-        // Fallback logic is good
         return DateTime.UtcNow;
     }
 }
